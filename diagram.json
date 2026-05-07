@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "author": "Dani Micro Tech Lab AMB",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": -172.2, "left": -77.4, "attrs": {} },
+    { "type": "wokwi-lcd1602", "id": "lcd1", "top": 6.4, "left": 236, "attrs": { "pins": "i2c" } },
+    { "type": "wokwi-ky-040", "id": "encoder1", "top": -353.5, "left": -106.4, "attrs": {} },
+    {
+      "type": "wokwi-buzzer",
+      "id": "bz1",
+      "top": -362.4,
+      "left": -199.8,
+      "attrs": { "volume": "0.1" }
+    }
+  ],
+  "connections": [
+    [ "uno:5V", "lcd1:VCC", "red", [ "v0" ] ],
+    [ "uno:GND.2", "lcd1:GND", "black", [ "v0" ] ],
+    [ "uno:A4", "lcd1:SDA", "green", [ "v0" ] ],
+    [ "uno:A5", "lcd1:SCL", "green", [ "v0" ] ],
+    [ "encoder1:GND", "uno:GND.1", "black", [ "h0" ] ],
+    [ "encoder1:SW", "uno:5", "green", [ "h0" ] ],
+    [ "encoder1:DT", "uno:3", "green", [ "h0" ] ],
+    [ "encoder1:CLK", "uno:4", "green", [ "h0" ] ],
+    [ "uno:8", "bz1:2", "green", [ "v0" ] ],
+    [ "bz1:1", "uno:GND.1", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}
