@@ -400,12 +400,14 @@ class DSPL : protected LiquidCrystal_I2C {
 };
 
 void DSPL::init(void) {
-    LiquidCrystal_I2C::begin();
+    // Cambiamos la llamada a la clase base pasando los parámetros que pide
+    LiquidCrystal_I2C::begin(16, 2); 
     LiquidCrystal_I2C::clear();
+    LiquidCrystal_I2C::backlight(); // Opcional: enciende la luz
     for (uint8_t i = 0; i < 3; ++i)
         LiquidCrystal_I2C::createChar(i+1, (uint8_t *)custom_symbols[i]);
     full_second_line = false;
-	temp_units = 'C';
+    temp_units = 'C';
 }
 
 void DSPL::tSet(uint16_t t, bool Celsius) {
@@ -1709,3 +1711,4 @@ void loop() {
 		}
 	}
 }
+ 
