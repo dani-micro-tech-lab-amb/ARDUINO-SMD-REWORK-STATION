@@ -3,28 +3,45 @@
   "author": "Dani Micro Tech Lab AMB",
   "editor": "wokwi",
   "parts": [
-    { "type": "wokwi-arduino-uno", "id": "uno", "top": -172.2, "left": -77.4, "attrs": {} },
-    { "type": "wokwi-lcd1602", "id": "lcd1", "top": 6.4, "left": 236, "attrs": { "pins": "i2c" } },
-    { "type": "wokwi-ky-040", "id": "encoder1", "top": -353.5, "left": -106.4, "attrs": {} },
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 19.8, "left": 28.2, "attrs": {} },
+    { "type": "wokwi-ky-040", "id": "encoder1", "top": -219.1, "left": 18.4, "attrs": {} },
     {
       "type": "wokwi-buzzer",
       "id": "bz1",
-      "top": -362.4,
-      "left": -199.8,
+      "top": -84,
+      "left": -84.6,
       "attrs": { "volume": "0.1" }
+    },
+    { "type": "wokwi-lcd1602", "id": "lcd1", "top": -351.77, "left": 419.2, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": -318.1, "left": 335.8, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 282.35,
+      "left": 432,
+      "attrs": { "value": "1000" }
     }
   ],
   "connections": [
-    [ "uno:5V", "lcd1:VCC", "red", [ "v0" ] ],
-    [ "uno:GND.2", "lcd1:GND", "black", [ "v0" ] ],
-    [ "uno:A4", "lcd1:SDA", "green", [ "v0" ] ],
-    [ "uno:A5", "lcd1:SCL", "green", [ "v0" ] ],
     [ "encoder1:GND", "uno:GND.1", "black", [ "h0" ] ],
     [ "encoder1:SW", "uno:5", "green", [ "h0" ] ],
     [ "encoder1:DT", "uno:3", "green", [ "h0" ] ],
     [ "encoder1:CLK", "uno:4", "green", [ "h0" ] ],
     [ "uno:8", "bz1:2", "green", [ "v0" ] ],
-    [ "bz1:1", "uno:GND.1", "green", [ "v0" ] ]
+    [ "bz1:1", "uno:GND.1", "green", [ "v0" ] ],
+    [ "lcd1:RS", "lcd1:V0", "green", [ "v0" ] ],
+    [ "lcd1:RS", "uno:12", "green", [ "v19.2", "h-239.7" ] ],
+    [ "lcd1:E", "uno:10", "green", [ "v38.4", "h-288" ] ],
+    [ "lcd1:D7", "uno:6", "green", [ "v48", "h-326.1" ] ],
+    [ "pot1:VCC", "lcd1:V0", "red", [ "v153.6", "h152.8" ] ],
+    [ "uno:5V", "r1:1", "red", [ "v0" ] ],
+    [ "lcd1:A", "r1:2", "green", [ "v0" ] ],
+    [ "uno:GND.2", "lcd1:K", "black", [ "v105.5", "h426.3" ] ],
+    [ "pot1:SIG", "uno:5V", "green", [ "v537.6", "h-96.4" ] ],
+    [ "uno:GND.2", "pot1:GND", "black", [ "v57.5", "h90.3" ] ],
+    [ "uno:A2", "lcd1:D4", "green", [ "v38.3", "h224.8" ] ],
+    [ "uno:A3", "lcd1:D5", "green", [ "v28.7", "h205.7" ] ],
+    [ "uno:13", "lcd1:D6", "green", [ "v-192", "h0.4" ] ]
   ],
   "dependencies": {}
 }
