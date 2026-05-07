@@ -4,8 +4,7 @@
  */
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 #include <LiquidCrystal.h>
 #include <CommonControls.h>
 #include <EEPROM.h>
