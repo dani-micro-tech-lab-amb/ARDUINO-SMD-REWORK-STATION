@@ -2,6 +2,6 @@ El presente fork tiene como finalidad ayudar a las personas que requieran adapta
 Las instrucciones originales de los pines y todo lo demás las pueden encontrar en https://www.instructables.com/DIY-SMD-REWORK-STATION/
 En el proyecto actual en la simulación los pines que cambiarán serán relativos a la pantalla y el encoder principalmente. 
 
-En la rama master encontrará una simulación acorde al diseño original, pantalla LCD 1602 por medio de I2C, el arduino ajustado a un Arduino uno y el encoder un encoder genérico, espero le sea de ayuda. En las otras ramas encontrará variaciones, desde quitar el I2C y usar 2 encoder analógicos en la rama WO_I2C hasta cambiar la pantalla por una pantalla TFT. 
+En la rama master encontrará una simulación acorde al diseño original, pantalla LCD 1602 por medio de I2C, el arduino ajustado a un Arduino uno y un encoder genérico, espero le sea de ayuda. En las otras ramas encontrará variaciones, desde quitar el I2C hasta usar 2 sólo 2 potenciómetros (con una funcionalidad e interfaz simplificada) o cambiar la pantalla por una pantalla TFT. 
 
 Cualquier aporte a mi proyecto es bien recibido. Si tiene alguna inquietud, no dude en contactarme, siempre que esté a mi alcance responderla lo haré.
