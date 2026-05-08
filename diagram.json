@@ -3,28 +3,39 @@
   "author": "Dani Micro Tech Lab AMB",
   "editor": "wokwi",
   "parts": [
-    { "type": "wokwi-arduino-uno", "id": "uno", "top": -172.2, "left": -77.4, "attrs": {} },
-    { "type": "wokwi-lcd1602", "id": "lcd1", "top": 6.4, "left": 236, "attrs": { "pins": "i2c" } },
-    { "type": "wokwi-ky-040", "id": "encoder1", "top": -353.5, "left": -106.4, "attrs": {} },
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 0.6, "left": -0.6, "attrs": {} },
+    {
+      "type": "wokwi-ili9341",
+      "id": "tft1",
+      "top": -43.1,
+      "left": 394.8,
+      "rotate": 90,
+      "attrs": {}
+    },
     {
       "type": "wokwi-buzzer",
       "id": "bz1",
-      "top": -362.4,
-      "left": -199.8,
+      "top": -132,
+      "left": -142.2,
       "attrs": { "volume": "0.1" }
-    }
+    },
+    { "type": "wokwi-ky-040", "id": "encoder1", "top": 20.9, "left": 671.2, "attrs": {} }
   ],
   "connections": [
-    [ "uno:5V", "lcd1:VCC", "red", [ "v0" ] ],
-    [ "uno:GND.2", "lcd1:GND", "black", [ "v0" ] ],
-    [ "uno:A4", "lcd1:SDA", "green", [ "v0" ] ],
-    [ "uno:A5", "lcd1:SCL", "green", [ "v0" ] ],
-    [ "encoder1:GND", "uno:GND.1", "black", [ "h0" ] ],
-    [ "encoder1:SW", "uno:5", "green", [ "h0" ] ],
-    [ "encoder1:DT", "uno:3", "green", [ "h0" ] ],
-    [ "encoder1:CLK", "uno:4", "green", [ "h0" ] ],
-    [ "uno:8", "bz1:2", "green", [ "v0" ] ],
-    [ "uno:GND.1", "bz1:1", "black", [ "v-57.6", "h-220.5" ] ]
+    [ "uno:5V", "tft1:VCC", "red", [ "v47.9", "h128.6", "v-172.8" ] ],
+    [ "uno:GND.2", "tft1:GND", "black", [ "v28.7", "h128.7", "v-144" ] ],
+    [ "uno:13", "tft1:SCK", "white", [ "v-19.2", "h211.6", "v134.41" ] ],
+    [ "uno:11", "tft1:MOSI", "green", [ "v-28.8", "h183", "v134.41" ] ],
+    [ "uno:10", "tft1:D/C", "yellow", [ "v-38.4", "h163.9", "v134.4" ] ],
+    [ "uno:6", "tft1:CS", "blue", [ "v-48", "h109.3", "v124.8" ] ],
+    [ "uno:A1", "tft1:RST", "orange", [ "v19.1", "h90.3", "v-115.2" ] ],
+    [ "tft1:LED", "uno:5V", "red", [ "h-19.2", "v95.99", "h-167" ] ],
+    [ "uno:8", "bz1:2", "green", [ "v-48", "h-105.2" ] ],
+    [ "uno:GND.1", "bz1:1", "black", [ "v-19.2", "h-57.3" ] ],
+    [ "uno:GND.1", "encoder1:GND", "black", [ "v-86.4", "h749.1", "v143.2" ] ],
+    [ "encoder1:SW", "uno:5", "green", [ "h28.8", "v-96.1", "h-608.6" ] ],
+    [ "encoder1:DT", "uno:4", "green", [ "h19.2", "v-96.1", "h-589.5" ] ],
+    [ "encoder1:CLK", "uno:3", "green", [ "h9.6", "v-96", "h-570.4" ] ]
   ],
   "dependencies": {}
 }
