@@ -24,7 +24,7 @@
     [ "encoder1:DT", "uno:3", "green", [ "h0" ] ],
     [ "encoder1:CLK", "uno:4", "green", [ "h0" ] ],
     [ "uno:8", "bz1:2", "green", [ "v0" ] ],
-    [ "bz1:1", "uno:GND.1", "green", [ "v0" ] ]
+    [ "uno:GND.1", "bz1:1", "black", [ "v-57.6", "h-220.5" ] ]
   ],
   "dependencies": {}
 }
