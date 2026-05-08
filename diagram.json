@@ -7,12 +7,18 @@
     {
       "type": "wokwi-buzzer",
       "id": "bz1",
-      "top": -84,
-      "left": -84.6,
+      "top": -141.6,
+      "left": 59.4,
       "attrs": { "volume": "0.1" }
     },
     { "type": "wokwi-lcd1602", "id": "lcd1", "top": -351.77, "left": 419.2, "attrs": {} },
-    { "type": "wokwi-potentiometer", "id": "pot_contrast", "top": -318.1, "left": 335.8, "attrs": {} },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_contrast",
+      "top": -318.1,
+      "left": 335.8,
+      "attrs": {}
+    },
     {
       "type": "wokwi-resistor",
       "id": "r1",
@@ -21,20 +27,23 @@
       "attrs": { "value": "1000" }
     },
     { "type": "wokwi-potentiometer", "id": "pot_temp", "top": 373.1, "left": 479.8, "attrs": {} },
-    { "type": "wokwi-potentiometer", "id": "pot_air_flow", "top": 373.1, "left": 614.2, "attrs": {} }
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_air_flow",
+      "top": 373.1,
+      "left": 614.2,
+      "attrs": {}
+    }
   ],
   "connections": [
     [ "uno:8", "bz1:2", "green", [ "v0" ] ],
-    [ "bz1:1", "uno:GND.1", "green", [ "v0" ] ],
     [ "lcd1:RS", "lcd1:V0", "green", [ "v0" ] ],
     [ "lcd1:RS", "uno:12", "green", [ "v19.2", "h-239.7" ] ],
     [ "lcd1:E", "uno:10", "green", [ "v38.4", "h-288" ] ],
     [ "lcd1:D7", "uno:6", "green", [ "v48", "h-326.1" ] ],
-    [ "pot_contrast:VCC", "lcd1:V0", "red", [ "v153.6", "h152.8" ] ],
     [ "uno:5V", "r1:1", "red", [ "v0" ] ],
     [ "lcd1:A", "r1:2", "green", [ "v0" ] ],
     [ "uno:GND.2", "lcd1:K", "black", [ "v105.5", "h426.3" ] ],
-    [ "pot_contrast:SIG", "uno:5V", "green", [ "v537.6", "h-96.4" ] ],
     [ "uno:GND.2", "pot_contrast:GND", "black", [ "v57.5", "h90.3" ] ],
     [ "uno:A2", "lcd1:D4", "green", [ "v38.3", "h224.8" ] ],
     [ "uno:A3", "lcd1:D5", "green", [ "v28.7", "h205.7" ] ],
@@ -44,7 +53,10 @@
     [ "pot_temp:VCC", "uno:5V", "red", [ "v38.4", "h-10.4" ] ],
     [ "pot_air_flow:VCC", "uno:5V", "red", [ "v38.4", "h-231.2" ] ],
     [ "pot_temp:SIG", "uno:A4", "green", [ "v48", "h-230.8" ] ],
-    [ "pot_air_flow:SIG", "uno:A5", "green", [ "v57.6", "h-96.4" ] ]
+    [ "pot_air_flow:SIG", "uno:A5", "green", [ "v57.6", "h-96.4" ] ],
+    [ "pot_contrast:SIG", "lcd1:V0", "green", [ "v153.6", "h57.2" ] ],
+    [ "pot_contrast:VCC", "uno:5V", "red", [ "v537.6", "h-192.8" ] ],
+    [ "uno:GND.1", "bz1:1", "black", [ "v-28.8", "h-57.3" ] ]
   ],
   "dependencies": {}
 }
