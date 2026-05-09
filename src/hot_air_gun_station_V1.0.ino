@@ -32,6 +32,13 @@ const uint8_t BUZZER_PIN	= 8;                                            // Buzz
 #define TFT_DC_PIN  10     // DC on D10 matches Wokwi test code
 #define TFT_RST_PIN A1     // Use free analog pin A1 for TFT reset
 
+#define TFT_LABEL_SIZE 2
+#define TFT_VALUE_SIZE 3
+#define TFT_SMALL_SIZE 1
+
+#define TFT_CHAR_W(s) (6 * (s))
+#define TFT_CHAR_H(s) (8 * (s))
+
 //------------------------------------------ Configuration data ------------------------------------------------
 /* Config record in the EEPROM has the following format:
  * uint32_t ID                           each time increment by 1
@@ -388,7 +395,6 @@ void DSPL::init(void) {
     tft.setRotation(3);
     tft.fillScreen(ST7735_BLACK);
     tft.setTextWrap(false);
-    tft.setTextSize(1);
     tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
     temp_units = 'C';
     last_temp_units = 0;
@@ -401,10 +407,20 @@ void DSPL::init(void) {
 }
 
 void DSPL::drawStatic(void) {
+    tft.setTextSize(TFT_LABEL_SIZE);
     tft.setCursor(0, 0);
-    tft.print(F("Set:   C Fan:  %"));
-    tft.setCursor(0, 8);
-    tft.print(F("Cur:   C P:  %  "));
+    tft.print(F("SET"));
+    tft.setCursor(0, 56);
+    tft.print(F("CUR"));
+    tft.setCursor(84, 0);
+    tft.print(F("FAN"));
+    tft.setCursor(84, 56);
+    tft.print(F("PWR"));
+    tft.setTextSize(TFT_SMALL_SIZE);
+    tft.setCursor(84, 18);
+    tft.print(F("SPEED"));
+    tft.setCursor(84, 74);
+    tft.print(F("POWER"));
 }
 
 static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value) {
@@ -446,17 +462,22 @@ void DSPL::tSet(uint16_t t, bool Celsius) {
     if ((t == last_set) && (temp_units == last_temp_units)) return;
     last_set = t;
     last_temp_units = temp_units;
-    tft.setCursor(4 * 6, 0);
+    tft.fillRect(0, 20, 84, 40, ST7735_BLACK);
+    tft.setTextSize(TFT_VALUE_SIZE);
+    tft.setCursor(0, 20);
     print3d_on_tft(tft, t);
-    tft.setCursor(8 * 6, 0);
     tft.print(temp_units);
+    tft.setTextSize(TFT_LABEL_SIZE);
 }
 
 void DSPL::tCurr(uint16_t t) {
     if (t == last_curr) return;
     last_curr = t;
-    tft.setCursor(4 * 6, 8);
+    tft.fillRect(0, 76, 84, 40, ST7735_BLACK);
+    tft.setTextSize(TFT_VALUE_SIZE);
+    tft.setCursor(0, 76);
     print3d_on_tft(tft, t);
+    tft.setTextSize(TFT_LABEL_SIZE);
 }
 
 void DSPL::tInternal(uint16_t t) {
@@ -491,7 +512,12 @@ void DSPL::fanSpeed(uint8_t s) {
     uint8_t fanValue = map(s, 0, 255, 0, 99);
     if (fanValue == last_fan) return;
     last_fan = fanValue;
-    tft.setCursor(12 * 6, 0);
+    tft.fillRect(84, 24, 44, 24, ST7735_BLACK);
+    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.setCursor(84, 20);
+    tft.print(F("F:"));
+    tft.setCursor(84, 36);
+    tft.setTextSize(TFT_VALUE_SIZE - 1);
     print2d_on_tft(tft, fanValue);
 }
 
@@ -500,13 +526,18 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
     if (p == 0 && !show_zero) {
         if (last_power != 0xff) {
             last_power = 0xff;
-            tft.fillRect(12 * 6, 8, 12, 8, ST7735_BLACK);
+            tft.fillRect(84, 96, 44, 24, ST7735_BLACK);
         }
         return;
     }
     if (p == last_power) return;
     last_power = p;
-    tft.setCursor(12 * 6, 8);
+    tft.fillRect(84, 96, 44, 24, ST7735_BLACK);
+    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.setCursor(84, 92);
+    tft.print(F("P:"));
+    tft.setCursor(84, 108);
+    tft.setTextSize(TFT_VALUE_SIZE - 1);
     print2d_on_tft(tft, p);
 }
 
