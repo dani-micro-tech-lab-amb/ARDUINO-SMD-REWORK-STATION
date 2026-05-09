@@ -403,10 +403,11 @@ void DSPL::init(void) {
     last_fan = 0xff;
     last_power = 0xff;
     last_on_state = false;
-    drawStatic();
+    drawStatic(); // Draw static elements once during initialization
 }
 
 void DSPL::drawStatic(void) {
+    // Draw all static elements (labels) once
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.setCursor(0, 0);
     tft.print(F("SET"));
@@ -462,6 +463,8 @@ void DSPL::tSet(uint16_t t, bool Celsius) {
     if ((t == last_set) && (temp_units == last_temp_units)) return;
     last_set = t;
     last_temp_units = temp_units;
+    
+    // Redraw only the temperature value area
     tft.fillRect(0, 20, 84, 40, ST7735_BLACK);
     tft.setTextSize(TFT_VALUE_SIZE);
     tft.setCursor(0, 20);
@@ -473,6 +476,8 @@ void DSPL::tSet(uint16_t t, bool Celsius) {
 void DSPL::tCurr(uint16_t t) {
     if (t == last_curr) return;
     last_curr = t;
+    
+    // Redraw only the current temperature area
     tft.fillRect(0, 76, 84, 40, ST7735_BLACK);
     tft.setTextSize(TFT_VALUE_SIZE);
     tft.setCursor(0, 76);
@@ -512,6 +517,8 @@ void DSPL::fanSpeed(uint8_t s) {
     uint8_t fanValue = map(s, 0, 255, 0, 99);
     if (fanValue == last_fan) return;
     last_fan = fanValue;
+    
+    // Redraw only the fan speed area
     tft.fillRect(84, 24, 44, 24, ST7735_BLACK);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.setCursor(84, 20);
@@ -532,6 +539,8 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
     }
     if (p == last_power) return;
     last_power = p;
+    
+    // Redraw only the power area
     tft.fillRect(84, 96, 44, 24, ST7735_BLACK);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.setCursor(84, 92);
@@ -1698,21 +1707,22 @@ void setup() {
 
 void loop() {
     static bool     reset_encoder   = true;
-	static int16_t  old_pos 	    = 0;
-	static uint32_t ac_check 	    = 5000;
+    static int16_t  old_pos         = 0;
+    static uint32_t ac_check        = 5000;
+    static uint32_t last_update     = 0;
+    static uint32_t update_interval = 1000; // Actualización cada segundo
 
-  
-	int16_t pos = rotEncoder.read();
+    // Leer posición del encoder
+    int16_t pos = rotEncoder.read();
     if (reset_encoder) {
         old_pos = pos;
         reset_encoder = false;
-    } else {
-	    if (old_pos != pos) {
-		    pCurrentScreen->rotaryValue(pos);
-		    old_pos = pos;
-	    }
+    } else if (old_pos != pos) {
+        pCurrentScreen->rotaryValue(pos);
+        old_pos = pos;
     }
 
+    // Verificar cambio de pantalla por switch de reed
     SCREEN* nxt = pCurrentScreen->reedSwitch(reedSwitch.status());
     if (nxt != pCurrentScreen) {
         pCurrentScreen = nxt;
@@ -1721,51 +1731,59 @@ void loop() {
         return;
     }
     
-	uint8_t bStatus = rotButton.buttonCheck();
-	switch (bStatus) {
-		case 2:                                     						// long press;
-			nxt = pCurrentScreen->menu_long();
-			if (nxt != pCurrentScreen) {
-				pCurrentScreen = nxt;
-				pCurrentScreen->init();
+    // Manejo de botón
+    uint8_t bStatus = rotButton.buttonCheck();
+    switch (bStatus) {
+        case 2: // long press
+            nxt = pCurrentScreen->menu_long();
+            if (nxt != pCurrentScreen) {
+                pCurrentScreen = nxt;
+                pCurrentScreen->init();
                 reset_encoder = true;
-			}
-			break;
-		case 1:                                     						// short press
-			nxt = pCurrentScreen->menu();
-			if (nxt != pCurrentScreen) {
-				pCurrentScreen = nxt;
-				pCurrentScreen->init();
+            }
+            break;
+        case 1: // short press
+            nxt = pCurrentScreen->menu();
+            if (nxt != pCurrentScreen) {
+                pCurrentScreen = nxt;
+                pCurrentScreen->init();
                 reset_encoder = true;
-			}
-			break;
-		case 0:                                     						// Not pressed
-		default:
-			break;
-	}
+            }
+            break;
+        case 0: // Not pressed
+        default:
+            break;
+    }
 
-	nxt = pCurrentScreen->show();
-	if (nxt && pCurrentScreen != nxt) {           							// Be paranoiac, the returned value must not be null
-		pCurrentScreen = nxt;
-		pCurrentScreen->init();
-        reset_encoder = true;
-	}
-	
-	if (end_of_power_period) {												// Calculate the required power
-		hg.keepTemp();
-		end_of_power_period = false;
-	}
+    // Actualización de pantalla con intervalo controlado
+    uint32_t current_time = millis();
+    if (current_time - last_update >= update_interval) {
+        nxt = pCurrentScreen->show();
+        if (nxt && pCurrentScreen != nxt) {
+            pCurrentScreen = nxt;
+            pCurrentScreen->init();
+            reset_encoder = true;
+        }
+        last_update = current_time;
+    }
+    
+    // Control de temperatura
+    if (end_of_power_period) {
+        hg.keepTemp();
+        end_of_power_period = false;
+    }
 
-	if (millis() > ac_check) {
-		ac_check = millis() + 1000;
-		if (!hg.areExternalInterrupts()) {
-			nxt = &errScr;
-			if (nxt != pCurrentScreen) {
-				pCurrentScreen = nxt;
-				pCurrentScreen->init();
+    // Verificación de interrupciones AC
+    if (current_time > ac_check) {
+        ac_check = current_time + 1000;
+        if (!hg.areExternalInterrupts()) {
+            nxt = &errScr;
+            if (nxt != pCurrentScreen) {
+                pCurrentScreen = nxt;
+                pCurrentScreen->init();
                 reset_encoder = true;
-			}
-		}
-	}
+            }
+        }
+    }
 }
  
