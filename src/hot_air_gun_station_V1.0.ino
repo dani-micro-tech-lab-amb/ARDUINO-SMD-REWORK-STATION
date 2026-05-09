@@ -5,7 +5,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
 #include <CommonControls.h>
 #include <EEPROM.h>
 #include <SPI.h>
@@ -24,8 +25,12 @@ const uint8_t R_MAIN_PIN	= 3;                                            // Rota
 const uint8_t R_SECD_PIN	= 4;                                            // Rotary encoder secondary pin
 const uint8_t R_BUTN_PIN	= 5;                                            // Rotary encoder button pin
 
-const uint8_t REED_SW_PIN   = 11;                                            // Reed switch pin
+const uint8_t REED_SW_PIN   = 12;                                            // Reed switch pin moved to D12 to free D11 for display
 const uint8_t BUZZER_PIN	= 8;                                            // Buzzer pin
+
+#define TFT_CS_PIN  6      // CS on D6 matches Wokwi test code
+#define TFT_DC_PIN  10     // DC on D10 matches Wokwi test code
+#define TFT_RST_PIN A1     // Use free analog pin A1 for TFT reset
 
 //------------------------------------------ Configuration data ------------------------------------------------
 /* Config record in the EEPROM has the following format:
@@ -347,11 +352,12 @@ void BUZZER::init(void) {
 }
 
 //------------------------------------------ class lcd DSPLay for soldering IRON -----------------------------
-class DSPL : protected LiquidCrystal_I2C {
+class DSPL {
     public:
-        DSPL(void) : LiquidCrystal_I2C(0x27, 16, 2) { }
+        DSPL(void) : tft(TFT_CS_PIN, TFT_DC_PIN, TFT_RST_PIN) { }
         void    init(void);
-        void    clear(void)                                                 { LiquidCrystal_I2C::clear(); }
+        void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); drawStatic(); }
+        void    drawStatic(void);
         void    tSet(uint16_t t, bool Celsius = true);                      // Show the preset temperature
         void    tCurr(uint16_t t);                                          // Show the current temperature
         void    tInternal(uint16_t t);                                      // Show the current temperature in internal units
@@ -368,143 +374,162 @@ class DSPL : protected LiquidCrystal_I2C {
     private:
         bool 	full_second_line;                                           // Whether the second line is full with the message
 		char 	temp_units;
-        const   uint8_t custom_symbols[3][8] = {
-                          { 0b00110,                                        // Degree
-                            0b01001,
-                            0b01001,
-                            0b00110,
-                            0b00000,
-                            0b00000,
-                            0b00000,
-                            0b00000
-                          },
-                          { 0b00100,                                        // Fan sign
-                            0b01100,
-                            0b01100,
-                            0b00110,
-                            0b01011,
-                            0b11001,
-                            0b10000,
-                            0b00000
-                          },
-                          { 0b00011,                                        // Power sign
-                            0b00110,
-                            0b01100,
-                            0b11111,
-                            0b00110,
-                            0b01100,
-                            0b01000,
-                            0b10000
-                          }
-                        };
+        uint16_t last_set;
+        uint16_t last_curr;
+        uint8_t  last_fan;
+        uint8_t  last_power;
+        char     last_temp_units;
+        bool     last_on_state;
+        Adafruit_ST7735 tft;
 };
 
 void DSPL::init(void) {
-    // Cambiamos la llamada a la clase base pasando los parámetros que pide
-    LiquidCrystal_I2C::begin(16, 2); 
-    LiquidCrystal_I2C::clear();
-    LiquidCrystal_I2C::backlight(); // Opcional: enciende la luz
-    for (uint8_t i = 0; i < 3; ++i)
-        LiquidCrystal_I2C::createChar(i+1, (uint8_t *)custom_symbols[i]);
-    full_second_line = false;
+    tft.initR(INITR_BLACKTAB);
+    tft.setRotation(3);
+    tft.fillScreen(ST7735_BLACK);
+    tft.setTextWrap(false);
+    tft.setTextSize(1);
+    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
     temp_units = 'C';
+    last_temp_units = 0;
+    last_set = 0xffff;
+    last_curr = 0xffff;
+    last_fan = 0xff;
+    last_power = 0xff;
+    last_on_state = false;
+    drawStatic();
+}
+
+void DSPL::drawStatic(void) {
+    tft.setCursor(0, 0);
+    tft.print(F("Set:   C Fan:  %"));
+    tft.setCursor(0, 8);
+    tft.print(F("Cur:   C P:  %  "));
+}
+
+static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value) {
+    char buf[4] = {' ', ' ', ' ', 0};
+    if (value > 999) value = 999;
+    if (value >= 100) {
+        buf[0] = '0' + (value / 100);
+        buf[1] = '0' + ((value / 10) % 10);
+        buf[2] = '0' + (value % 10);
+    } else if (value >= 10) {
+        buf[1] = '0' + (value / 10);
+        buf[2] = '0' + (value % 10);
+    } else {
+        buf[2] = '0' + value;
+    }
+    tft.print(buf);
+}
+
+static void print2d_on_tft(Adafruit_ST7735 &tft, uint8_t value) {
+    char buf[3] = {' ', ' ', 0};
+    if (value >= 100) {
+        buf[0] = '9';
+        buf[1] = '9';
+    } else if (value >= 10) {
+        buf[0] = '0' + (value / 10);
+        buf[1] = '0' + (value % 10);
+    } else {
+        buf[1] = '0' + value;
+    }
+    tft.print(buf);
 }
 
 void DSPL::tSet(uint16_t t, bool Celsius) {
-    char buff[10];
-	if (Celsius) {
-		temp_units = 'C';
-	} else {
-		temp_units = 'F';
-	}
-    LiquidCrystal_I2C::setCursor(0, 0);
-    sprintf(buff, "Set:%3d%c%c", t, (char)1, temp_units);
-    LiquidCrystal_I2C::print(buff);
+    if (Celsius) {
+        temp_units = 'C';
+    } else {
+        temp_units = 'F';
+    }
+    if ((t == last_set) && (temp_units == last_temp_units)) return;
+    last_set = t;
+    last_temp_units = temp_units;
+    tft.setCursor(4 * 6, 0);
+    print3d_on_tft(tft, t);
+    tft.setCursor(8 * 6, 0);
+    tft.print(temp_units);
 }
 
 void DSPL::tCurr(uint16_t t) {
-    char buff[6];
-    LiquidCrystal_I2C::setCursor(0, 1);
-    if (t < 1000) {
-        sprintf(buff, "%3d%c ", t, (char)1);
-    } else {
-        LiquidCrystal_I2C::print(F("xxx"));
-        return;
-    }
-    LiquidCrystal_I2C::print(buff);
-    if (full_second_line) {
-        LiquidCrystal_I2C::print(F("           "));
-        full_second_line = false;
-    }
+    if (t == last_curr) return;
+    last_curr = t;
+    tft.setCursor(4 * 6, 8);
+    print3d_on_tft(tft, t);
 }
 
 void DSPL::tInternal(uint16_t t) {
     char buff[6];
-    LiquidCrystal_I2C::setCursor(0, 1);
+    tft.setCursor(0, 8);
     if (t < 1023) {
         sprintf(buff, "%4d ", t);
     } else {
-        LiquidCrystal_I2C::print(F("xxxx"));
+        tft.print(F("xxxx"));
         return;
     }
-    LiquidCrystal_I2C::print(buff);
+    tft.print(buff);
     if (full_second_line) {
-        LiquidCrystal_I2C::print(F("           "));
+        tft.fillRect(0, 8, 128, 8, ST7735_BLACK);
         full_second_line = false;
     }
 }
 
 void DSPL::tReal(uint16_t t) {
     char buff[6];
-    LiquidCrystal_I2C::setCursor(11, 1);
+    tft.setCursor(11 * 6, 8);
     if (t < 1000) {
-        sprintf(buff, ">%3d%c", t, (char)1);
+        sprintf(buff, ">%3dC", t);
     } else {
-        LiquidCrystal_I2C::print(F("xxx"));
+        tft.print(F("xxx"));
         return;
     }
-    LiquidCrystal_I2C::print(buff);
+    tft.print(buff);
 }
 
 void DSPL::fanSpeed(uint8_t s) {
-    char buff[6];
-    s = map(s, 0, 255, 0, 99);
-    sprintf(buff, " %c%2d%c", (char)2, s, '%');
-    LiquidCrystal_I2C::setCursor(11, 1);
-    LiquidCrystal_I2C::print(buff);
+    uint8_t fanValue = map(s, 0, 255, 0, 99);
+    if (fanValue == last_fan) return;
+    last_fan = fanValue;
+    tft.setCursor(12 * 6, 0);
+    print2d_on_tft(tft, fanValue);
 }
 
 void DSPL::appliedPower(uint8_t p, bool show_zero) {
-	char buff[6];
-	if (p > 99) p = 99;
-    LiquidCrystal_I2C::setCursor(5, 1);
+    if (p > 99) p = 99;
     if (p == 0 && !show_zero) {
-        LiquidCrystal_I2C::print(F("     "));
-    } else {
-	    sprintf(buff, " %c%2d%c", (char)3, p, '%');
-        LiquidCrystal_I2C::print(buff);
+        if (last_power != 0xff) {
+            last_power = 0xff;
+            tft.fillRect(12 * 6, 8, 12, 8, ST7735_BLACK);
+        }
+        return;
     }
+    if (p == last_power) return;
+    last_power = p;
+    tft.setCursor(12 * 6, 8);
+    print2d_on_tft(tft, p);
 }
 
 void DSPL::setupMode(byte mode) {
-    LiquidCrystal_I2C::clear();
-    LiquidCrystal_I2C::print(F("setup"));
-    LiquidCrystal_I2C::setCursor(1,1);
+    tft.fillScreen(ST7735_BLACK);
+    tft.setCursor(0, 0);
+    tft.print(F("setup"));
+    tft.setCursor(6, 8);
     switch (mode) {
         case 0:                                                             // tip calibrate
-            LiquidCrystal_I2C::print(F("calibrate"));
+            tft.print(F("calibrate"));
             break;
         case 1:                                                             // tune
-            LiquidCrystal_I2C::print(F("tune"));
+            tft.print(F("tune"));
             break;
         case 2:                                                             // save
-            LiquidCrystal_I2C::print(F("save"));
+            tft.print(F("save"));
             break;
         case 3:                                                             // cancel
-            LiquidCrystal_I2C::print(F("cancel"));
+            tft.print(F("cancel"));
             break;
         case 4:                                                             // set defaults
-            LiquidCrystal_I2C::print(F("reset config"));
+            tft.print(F("reset config"));
             break;
         default:
             break;
@@ -512,34 +537,35 @@ void DSPL::setupMode(byte mode) {
 }
 
 void DSPL::msgON(void) {
-    LiquidCrystal_I2C::setCursor(10, 0);
-    LiquidCrystal_I2C::print(F("    ON"));
+    tft.setCursor(10 * 6, 0);
+    tft.print(F("    ON"));
 }
 
 void DSPL::msgOFF(void) {
-    LiquidCrystal_I2C::setCursor(10, 0);
-    LiquidCrystal_I2C::print(F("   OFF"));
+    tft.setCursor(10 * 6, 0);
+    tft.print(F("   OFF"));
 }
 
-
 void DSPL::msgReady(void) {
-    LiquidCrystal_I2C::setCursor(10, 0);
-    LiquidCrystal_I2C::print(F(" Ready"));
+    tft.setCursor(10 * 6, 0);
+    tft.print(F(" Ready"));
 }
 
 void DSPL::msgCold(void) {
-    LiquidCrystal_I2C::setCursor(10, 0);
-    LiquidCrystal_I2C::print(F("  Cold"));
+    tft.setCursor(10 * 6, 0);
+    tft.print(F("  Cold"));
 }
 
 void DSPL::msgFail(void) {
-    LiquidCrystal_I2C::setCursor(0, 1);
-    LiquidCrystal_I2C::print(F(" -== Failed ==- "));
+    tft.fillScreen(ST7735_BLACK);
+    tft.setCursor(0, 8);
+    tft.print(F("-== Failed ==-"));
 }
 
 void DSPL::msgTune(void) {
-    LiquidCrystal_I2C::setCursor(0, 0);
-    LiquidCrystal_I2C::print(F("Tune"));
+    tft.fillScreen(ST7735_BLACK);
+    tft.setCursor(0, 8);
+    tft.print(F("Tune"));
 }
 
 //------------------------------------------ class HISTORY ----------------------------------------------------
