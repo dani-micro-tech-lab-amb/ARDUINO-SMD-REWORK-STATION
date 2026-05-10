@@ -617,11 +617,11 @@ void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pw
   tft.fillScreen(ST7735_BLACK);
   
   // Cabecera de alerta
-  tft.fillRect(0, 0, tft.width(), 20, ST7735_RED);
-  tft.setTextColor(ST7735_WHITE);
-  tft.setTextSize(2);
-  tft.setCursor(35, 4);
-  tft.print("ALERT");
+    tft.fillRect(0, 0, tft.width(), 20, ST7735_RED);
+    tft.setTextColor(ST7735_WHITE);
+    tft.setTextSize(2);
+    tft.setCursor(51, 3);
+    tft.print("ALERT");
   
   // Icono central
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
