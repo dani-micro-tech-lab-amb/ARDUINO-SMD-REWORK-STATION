@@ -409,18 +409,18 @@ void DSPL::init(void) {
 void DSPL::drawStatic(void) {
     // Draw all static elements (labels) once
     tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(0, 0);
+    tft.setCursor(20, 5);
     tft.print(F("SET"));
-    tft.setCursor(0, 56);
+    tft.setCursor(20, 56);
     tft.print(F("CUR"));
-    tft.setCursor(84, 0);
+    tft.setCursor(104, 5);
     tft.print(F("FAN"));
-    tft.setCursor(84, 56);
+    tft.setCursor(104, 56);
     tft.print(F("PWR"));
     tft.setTextSize(TFT_SMALL_SIZE);
-    tft.setCursor(84, 18);
+    tft.setCursor(104, 23);
     tft.print(F("SPEED"));
-    tft.setCursor(84, 74);
+    tft.setCursor(104, 74);
     tft.print(F("POWER"));
 }
 
@@ -465,9 +465,9 @@ void DSPL::tSet(uint16_t t, bool Celsius) {
     last_temp_units = temp_units;
     
     // Redraw only the temperature value area
-    tft.fillRect(0, 20, 72, 24, ST7735_BLACK);
+    tft.fillRect(20, 25, 72, 24, ST7735_BLACK);
     tft.setTextSize(TFT_VALUE_SIZE);
-    tft.setCursor(0, 20);
+    tft.setCursor(20, 25);
     print3d_on_tft(tft, t);
     tft.print(temp_units);
 }
@@ -477,9 +477,9 @@ void DSPL::tCurr(uint16_t t) {
     last_curr = t;
     
     // Redraw only the current temperature area
-    tft.fillRect(0, 76, 72, 24, ST7735_BLACK);
+    tft.fillRect(20, 76, 72, 24, ST7735_BLACK);
     tft.setTextSize(TFT_VALUE_SIZE);
-    tft.setCursor(0, 76);
+    tft.setCursor(20, 76);
     print3d_on_tft(tft, t);
     tft.print(temp_units);
 }
@@ -522,8 +522,8 @@ void DSPL::fanSpeed(uint8_t s) {
     last_fan = fanValue;
     
     // Redraw only the fan speed area
-    tft.fillRect(84, 30, 24, 16, ST7735_BLACK);
-    tft.setCursor(84, 30);
+    tft.fillRect(104, 35, 24, 16, ST7735_BLACK);
+    tft.setCursor(104, 35);
     tft.setTextSize(TFT_LABEL_SIZE);
     print2d_on_tft(tft, fanValue);
 }
@@ -533,7 +533,7 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
     if (p == 0 && !show_zero) {
         if (last_power != 0xff) {
             last_power = 0xff;
-            tft.fillRect(84, 96, 44, 24, ST7735_BLACK);
+            tft.fillRect(104, 96, 44, 24, ST7735_BLACK);
         }
         return;
     }
@@ -541,8 +541,8 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
     last_power = p;
     
     // Redraw only the power area
-    tft.fillRect(84, 86, 24, 16, ST7735_BLACK);
-    tft.setCursor(84, 86);
+    tft.fillRect(104, 86, 24, 16, ST7735_BLACK);
+    tft.setCursor(104, 86);
     tft.setTextSize(TFT_LABEL_SIZE);
     print2d_on_tft(tft, p);
 }
@@ -574,42 +574,42 @@ void DSPL::setupMode(byte mode) {
 }
 
 void DSPL::msgON(void) {
-    tft.fillRect(0, 105, 30, 8, ST7735_BLACK);
-    tft.setCursor(0, 105); 
+    tft.fillRect(20, 105, 30, 8, ST7735_BLACK);
+    tft.setCursor(20, 105); 
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.print(F("ON"));
 }
 
 void DSPL::msgOFF(void) {
-    tft.fillRect(0, 105, 30, 8, ST7735_BLACK);
-    tft.setCursor(0, 105);
+    tft.fillRect(20, 105, 30, 8, ST7735_BLACK);
+    tft.setCursor(20, 105);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.print(F("OFF"));
 }
 
 void DSPL::msgReady(void) {
-    tft.fillRect(0, 105, 30, 8, ST7735_BLACK);
-    tft.setCursor(0, 105);
+    tft.fillRect(20, 105, 30, 8, ST7735_BLACK);
+    tft.setCursor(20, 105);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.print(F("Ready"));
 }
 
 void DSPL::msgCold(void) {
-    tft.fillRect(0, 105, 30, 8, ST7735_BLACK);
-    tft.setCursor(0, 105);
+    tft.fillRect(20, 105, 30, 8, ST7735_BLACK);
+    tft.setCursor(20, 105);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.print(F("Cold"));
 }
 
 void DSPL::msgFail(void) {
     tft.fillScreen(ST7735_BLACK);
-    tft.setCursor(0, 8);
+    tft.setCursor(20, 8);
     tft.print(F("-== Failed ==-"));
 }
 
 void DSPL::msgTune(void) {
     tft.fillScreen(ST7735_BLACK);
-    tft.setCursor(0, 8);
+    tft.setCursor(20, 8);
     tft.print(F("Tune"));
 }
 
