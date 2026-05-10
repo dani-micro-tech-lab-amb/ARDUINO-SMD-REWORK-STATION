@@ -1002,7 +1002,6 @@ void mainSCREEN::init(void) {
 	}
 	mode_temp = true;
 	clear_used_ms = 0;
-    pD->clear();
 	forceRedraw();
 }
 
@@ -1104,7 +1103,6 @@ void workSCREEN::init(void) {
     mode_temp   = false;                                                    // By default adjust the fan speed
 	pHG->switchPower(true);
 	ready = false;
-	pD->clear();
 	forceRedraw();
 }
 
@@ -1182,7 +1180,7 @@ class errorSCREEN : public SCREEN {
 			pD    	= DSP;
 			pBz   	= Buzz;
 		}
-		virtual void init(void)                                             { pHG->switchPower(false); pD->clear(); pD->msgFail(); pBz->failedBeep(); }
+		virtual void init(void)                                             { pHG->switchPower(false); pD->msgFail(); pBz->failedBeep(); }
         virtual SCREEN* menu(void)                                          { if (this->next != 0)  return this->next;  else return this; }
 	private:
 		HOTGUN*    	pHG;                             						// Pointer to the got air gun instance
@@ -1217,8 +1215,7 @@ class configSCREEN : public SCREEN {
 void configSCREEN::init(void) {
     pHG->switchPower(false);
     mode = 0;
-    pEnc->reset(mode, 0, 4, 1, 0, true);          
-    pD->clear();
+    pEnc->reset(mode, 0, 4, 1, 0, true);
     pD->setupMode(0);
     this->scr_timeout = 30;                                                 // This variable is defined in the superclass
 }
@@ -1710,84 +1707,71 @@ void setup() {
     pCurrentScreen->init();
 }
 
+// ... existing code ...
+
 void loop() {
-    static bool     reset_encoder   = true;
-    static int16_t  old_pos         = 0;
-    static uint32_t ac_check        = 5000;
-    static uint32_t last_update     = 0;
-    static uint32_t update_interval = 1000; // Actualización cada segundo
+  static bool     reset_encoder       = true;
+  static int16_t  old_pos             = 0;
+  static uint32_t ac_check            = 5000;
+  static uint32_t last_update         = 0;
+  static uint32_t last_screen_change  = 0; // <--- Nuevo: Para evitar parpadeo
 
-    // Leer posición del encoder
-    int16_t pos = rotEncoder.read();
-    if (reset_encoder) {
-        old_pos = pos;
-        reset_encoder = false;
-    } else if (old_pos != pos) {
-        pCurrentScreen->rotaryValue(pos);
-        old_pos = pos;
-    }
+  int16_t pos = rotEncoder.read();
+  if (reset_encoder) {
+    old_pos = pos;
+    reset_encoder = false;
+  } else if (old_pos != pos) {
+    pCurrentScreen->rotaryValue(pos);
+    old_pos = pos;
+  }
 
-    // Verificar cambio de pantalla por switch de reed
-    SCREEN* nxt = pCurrentScreen->reedSwitch(reedSwitch.status());
-    if (nxt != pCurrentScreen) {
-        pCurrentScreen = nxt;
-        pCurrentScreen->init();
-        reset_encoder = true;
-        return;
-    }
-    
-    // Manejo de botón
+  SCREEN* nxt = nullptr;
+
+  // 1. Reed Switch
+  SCREEN* rNxt = pCurrentScreen->reedSwitch(reedSwitch.status());
+  if (rNxt != pCurrentScreen) nxt = rNxt;
+
+  // 2. Botones
+  if (!nxt) {
     uint8_t bStatus = rotButton.buttonCheck();
-    switch (bStatus) {
-        case 2: // long press
-            nxt = pCurrentScreen->menu_long();
-            if (nxt != pCurrentScreen) {
-                pCurrentScreen = nxt;
-                pCurrentScreen->init();
-                reset_encoder = true;
-            }
-            break;
-        case 1: // short press
-            nxt = pCurrentScreen->menu();
-            if (nxt != pCurrentScreen) {
-                pCurrentScreen = nxt;
-                pCurrentScreen->init();
-                reset_encoder = true;
-            }
-            break;
-        case 0: // Not pressed
-        default:
-            break;
+    if (bStatus == 2) {
+      SCREEN* bNxt = pCurrentScreen->menu_long();
+      if (bNxt != pCurrentScreen) nxt = bNxt;
+    } else if (bStatus == 1) {
+      SCREEN* bNxt = pCurrentScreen->menu();
+      if (bNxt != pCurrentScreen) nxt = bNxt;
     }
+  }
 
-    // Actualización de pantalla con intervalo controlado
+  // 3. Show & AC Check
+  if (!nxt) {
+    SCREEN* sNxt = pCurrentScreen->show();
+    if (sNxt != pCurrentScreen) nxt = sNxt;
+
     uint32_t current_time = millis();
-    if (current_time - last_update >= update_interval) {
-        nxt = pCurrentScreen->show();
-        if (nxt && pCurrentScreen != nxt) {
-            pCurrentScreen = nxt;
-            pCurrentScreen->init();
-            reset_encoder = true;
-        }
-        last_update = current_time;
-    }
-    
-    // Control de temperatura
-    if (end_of_power_period) {
-        hg.keepTemp();
-        end_of_power_period = false;
-    }
+    if (current_time - last_update >= 1000) last_update = current_time;
 
-    // Verificación de interrupciones AC
     if (current_time > ac_check) {
-        ac_check = current_time + 1000;
-        if (!hg.areExternalInterrupts()) {
-            nxt = &errScr;
-            if (nxt != pCurrentScreen) {
-                pCurrentScreen = nxt;
-                pCurrentScreen->init();
-                reset_encoder = true;
-            }
-        }
+      ac_check = current_time + 1000;
+      if (!hg.areExternalInterrupts()) nxt = &errScr;
     }
+  }
+
+  // === TRANSICIÓN CON DEBOUNCE ===
+  if (nxt && nxt != pCurrentScreen) {
+    // Evita cambios bruscos si han pasado menos de 500ms
+    if (millis() - last_screen_change > 500) {
+      disp.clear();
+      nxt->init();
+      pCurrentScreen = nxt;
+      last_screen_change = millis();
+      reset_encoder = true;
+    }
+  }
+
+  // 4. Control de temperatura (siempre activo)
+  if (end_of_power_period) {
+    hg.keepTemp();
+    end_of_power_period = false;
+  }
 }
