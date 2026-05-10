@@ -602,6 +602,7 @@ void DSPL::msgCold(void) {
 void DSPL::msgFail(void) {
     tft.fillScreen(ST7735_BLACK);
     tft.setCursor(20, 8);
+    tft.setTextSize(TFT_SMALL_SIZE);
     tft.print(F("-== Failed ==-"));
 }
 
@@ -1714,7 +1715,7 @@ void loop() {
   static uint32_t ac_check            = 5000;
   static uint32_t last_update         = 0;
   static uint32_t last_screen_change  = 0;
-  static bool     boot_guard          = true; // <--- Nuevo: evita clears en el arranque
+  static bool     boot_guard          = true;
 
   int16_t pos = rotEncoder.read();
   if (reset_encoder) {
@@ -1743,33 +1744,32 @@ void loop() {
   }
 
   // 3. Show & AC Check
-  if (!nxt) {
+   if (!nxt) {
     SCREEN* sNxt = pCurrentScreen->show();
     if (sNxt != pCurrentScreen) nxt = sNxt;
-
     uint32_t current_time = millis();
     if (current_time - last_update >= 1000) last_update = current_time;
-
     if (current_time > ac_check) {
       ac_check = current_time + 1000;
       if (!hg.areExternalInterrupts()) nxt = &errScr;
     }
   }
 
-  // === TRANSICIÓN PROTEGIDA ===
+  // === TRANSICIÓN CORREGIDA ===
   if (nxt && nxt != pCurrentScreen) {
-    // Evita cambios bruscos si ha pasado <500ms o estamos en el primer segundo de arranque
     if (!boot_guard || (millis() > 1000 && millis() - last_screen_change > 500)) {
-      disp.clear(); // Esto redibuja las etiquetas sobre RAM estable
+      // CORRECCIÓN: Omite clear() si la pantalla destino ya limpia su propio fondo
+      if (nxt != &errScr && nxt != &tuneScr && nxt != &clbScr) {
+        disp.clear();
+      }
       nxt->init();
       pCurrentScreen = nxt;
       last_screen_change = millis();
-      boot_guard = false; // Desactiva la protección tras la primera transición
+      boot_guard = false;
       reset_encoder = true;
     }
   }
 
-  // 4. Control de temperatura (siempre activo)
   if (end_of_power_period) {
     hg.keepTemp();
     end_of_power_period = false;
