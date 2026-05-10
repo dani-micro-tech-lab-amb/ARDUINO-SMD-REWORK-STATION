@@ -391,21 +391,19 @@ class DSPL {
 };
 
 void DSPL::init(void) {
-    tft.initR(INITR_BLACKTAB);
-    tft.setRotation(3);
-    tft.fillScreen(ST7735_BLACK);
-    tft.setTextWrap(false);
-    tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
-    temp_units = 'C';
-    last_temp_units = 0;
-    last_set = 0xffff;
-    last_curr = 0xffff;
-    last_fan = 0xff;
-    last_power = 0xff;
-    last_on_state = false;
-    drawStatic(); // Draw static elements once during initialization
+  tft.initR(INITR_BLACKTAB);
+  tft.setRotation(3);
+  tft.fillScreen(ST7735_BLACK);
+  tft.setTextWrap(false);
+  tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
+  temp_units = 'C';
+  last_temp_units = 0;
+  last_set = 0xffff;
+  last_curr = 0xffff;
+  last_fan = 0xff;
+  last_power = 0xff;
+  last_on_state = false;
 }
-
 void DSPL::drawStatic(void) {
     // Draw all static elements (labels) once
     tft.setTextSize(TFT_LABEL_SIZE);
@@ -1705,16 +1703,18 @@ void setup() {
 	errScr.next     = &offScr;
 
     pCurrentScreen->init();
+  
+    // Pequeña pausa para que el primer ciclo del loop no colisione con la inicialización
+    delay(50); 
 }
-
-// ... existing code ...
 
 void loop() {
   static bool     reset_encoder       = true;
   static int16_t  old_pos             = 0;
   static uint32_t ac_check            = 5000;
   static uint32_t last_update         = 0;
-  static uint32_t last_screen_change  = 0; // <--- Nuevo: Para evitar parpadeo
+  static uint32_t last_screen_change  = 0;
+  static bool     boot_guard          = true; // <--- Nuevo: evita clears en el arranque
 
   int16_t pos = rotEncoder.read();
   if (reset_encoder) {
@@ -1726,7 +1726,6 @@ void loop() {
   }
 
   SCREEN* nxt = nullptr;
-
   // 1. Reed Switch
   SCREEN* rNxt = pCurrentScreen->reedSwitch(reedSwitch.status());
   if (rNxt != pCurrentScreen) nxt = rNxt;
@@ -1757,14 +1756,15 @@ void loop() {
     }
   }
 
-  // === TRANSICIÓN CON DEBOUNCE ===
+  // === TRANSICIÓN PROTEGIDA ===
   if (nxt && nxt != pCurrentScreen) {
-    // Evita cambios bruscos si han pasado menos de 500ms
-    if (millis() - last_screen_change > 500) {
-      disp.clear();
+    // Evita cambios bruscos si ha pasado <500ms o estamos en el primer segundo de arranque
+    if (!boot_guard || (millis() > 1000 && millis() - last_screen_change > 500)) {
+      disp.clear(); // Esto redibuja las etiquetas sobre RAM estable
       nxt->init();
       pCurrentScreen = nxt;
       last_screen_change = millis();
+      boot_guard = false; // Desactiva la protección tras la primera transición
       reset_encoder = true;
     }
   }
