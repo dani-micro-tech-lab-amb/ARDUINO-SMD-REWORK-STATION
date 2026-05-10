@@ -377,7 +377,8 @@ class DSPL {
         void    msgReady(void);
         void    msgCold(void);
         void    msgFail(void);                                              // Show 'Fail' message
-        void    msgTune(void);                                              // Show 'Tune' message
+        void    msgTune(void);
+        void    showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pwr);                                              // Show 'Tune' message
     private:
         bool 	full_second_line;                                           // Whether the second line is full with the message
 		char 	temp_units;
@@ -610,6 +611,52 @@ void DSPL::msgTune(void) {
     tft.fillScreen(ST7735_BLACK);
     tft.setCursor(20, 8);
     tft.print(F("Tune"));
+}
+
+void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pwr) {
+  tft.fillScreen(ST7735_BLACK);
+  
+  // Cabecera de alerta
+  tft.fillRect(0, 0, tft.width(), 20, ST7735_RED);
+  tft.setTextColor(ST7735_WHITE);
+  tft.setTextSize(2);
+  tft.setCursor(35, 4);
+  tft.print("ALERT");
+  
+  // Icono central
+  tft.setTextColor(ST7735_RED, ST7735_BLACK);
+  tft.setTextSize(3);
+  tft.setCursor(65, 50);
+  tft.print("!");
+  
+  // Descripción del error
+  tft.setTextColor(ST7735_RED, ST7735_BLACK);
+  tft.setTextSize(1);
+  tft.setCursor(5, 30);
+  
+  switch(errCode) {
+    case 1: tft.print("AC synchronization failure"); break;
+    case 2: tft.print("Temperature reading failure"); break;
+    case 3: tft.print("Overheating detected"); break;
+    default: tft.print("Uncatalogued error"); break;
+  }
+  
+  // Datos de contexto para diagnóstico
+  tft.setTextColor(ST7735_CYAN, ST7735_BLACK);
+  tft.setCursor(5, 45);
+  tft.print("Temp: "); tft.print(lastTemp);
+  tft.setCursor(5, 58);
+  tft.print("Fan: "); tft.print(fan);
+  tft.setCursor(5, 71);
+  tft.print("Pwr: "); tft.print(pwr);
+  
+  // Instrucción de acción
+  tft.setTextColor(ST7735_YELLOW, ST7735_BLACK);
+  tft.setCursor(5, 84);
+  tft.print("Press encoder to return");
+
+  // Línea separadora inferior
+  tft.drawLine(0, 97, tft.width(), 97, ST7735_GREEN);
 }
 
 //------------------------------------------ class HISTORY ----------------------------------------------------
@@ -1172,20 +1219,32 @@ SCREEN* workSCREEN::reedSwitch(bool on) {
 }
 
 //---------------------------------------- class errorSCREEN [the error detected] ------------------------------
+
 class errorSCREEN : public SCREEN {
-	public:
-		errorSCREEN(HOTGUN* HG, DSPL* DSP, BUZZER* Buzz) {
-			pHG 	= HG;
-			pD    	= DSP;
-			pBz   	= Buzz;
-		}
-		virtual void init(void)                                             { pHG->switchPower(false); pD->msgFail(); pBz->failedBeep(); }
-        virtual SCREEN* menu(void)                                          { if (this->next != 0)  return this->next;  else return this; }
-	private:
-		HOTGUN*    	pHG;                             						// Pointer to the got air gun instance
-		DSPL*    	pD;                                						// Pointer to the display instance
-		BUZZER*  	pBz;                               						// Pointer to the simple Buzzer instance
+public:
+  errorSCREEN(HOTGUN* HG, DSPL* DSP, BUZZER* Buzz) {
+    pHG = HG; pD = DSP; pBz = Buzz;
+  }
+  virtual void    init(void);
+  virtual SCREEN* show(void)  { return this; } // No necesita redibujado
+  virtual SCREEN* menu(void)  { if (this->next != 0) return this->next; else return this; }
+private:
+  HOTGUN*     pHG;
+  DSPL*       pD;
+  BUZZER*     pBz;
 };
+
+void errorSCREEN::init(void) {
+  pHG->switchPower(false); // Apaga hardware inmediatamente
+  
+  // Captura el estado EXACTO en el instante del fallo
+  uint16_t t = pHG->tempAverage();
+  uint8_t  f = pHG->getFanSpeed();
+  uint8_t  p = pHG->appliedPower();
+  
+  pD->showError(1, t, f, p); // 1; // Pinta el panel diagnóstico
+  pBz->failedBeep();      // Alerta sonora
+}
 
 //---------------------------------------- class configSCREEN [configuration menu] -----------------------------
 class configSCREEN : public SCREEN {
