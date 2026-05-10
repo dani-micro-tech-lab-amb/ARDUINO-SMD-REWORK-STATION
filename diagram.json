@@ -26,9 +26,7 @@
     [ "uno:8", "bz1:2", "green", [ "v-67.2", "h-277.6" ] ],
     [ "uno:GND.1", "bz1:1", "black", [ "v-19.2", "h-57.3" ] ],
     [ "uno:GND.1", "encoder1:GND", "black", [ "v-86.4", "h749.1", "v143.2" ] ],
-    [ "encoder1:SW", "uno:5", "green", [ "h28.8", "v-96.1", "h-608.6" ] ],
-    [ "encoder1:DT", "uno:4", "green", [ "h19.2", "v-96.1", "h-589.5" ] ],
-    [ "encoder1:CLK", "uno:3", "green", [ "h9.6", "v-96", "h-570.4" ] ],
+    [ "encoder1:SW", "uno:5", "green", [ "h28.8", "v-115.1", "h-608.6" ] ],
     [ "uno:5V", "tft1:VCC", "red", [ "v28.7", "h215" ] ],
     [ "uno:GND.2", "tft1:GND", "black", [ "v38.3", "h215.1" ] ],
     [ "uno:13", "tft1:CLK", "white", [] ],
@@ -37,7 +35,9 @@
     [ "uno:6", "tft1:CS", "blue", [ "v-19.2", "h99.7", "v182.4", "h48" ] ],
     [ "uno:A1", "tft1:RST", "orange", [ "v19.1", "h147.9" ] ],
     [ "uno:13", "tft1:SCK", "white", [ "v-48", "h154", "v230.4", "h86.4" ] ],
-    [ "uno:11", "tft1:MOSI", "green", [ "v-38.4", "h144.6", "v211.2", "h86.4" ] ]
+    [ "uno:11", "tft1:MOSI", "green", [ "v-38.4", "h144.6", "v211.2", "h86.4" ] ],
+    [ "encoder1:DT", "uno:3", "green", [ "h19.2", "v-95.9", "h-580" ] ],
+    [ "encoder1:CLK", "uno:4", "green", [ "h9.6", "v-76.8", "h-579.9" ] ]
   ],
   "dependencies": { "chip-st7735": "github:martysweet/st7735-wokwi-chip@1.0.1" }
 }
