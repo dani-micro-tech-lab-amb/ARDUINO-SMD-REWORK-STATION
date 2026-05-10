@@ -465,12 +465,11 @@ void DSPL::tSet(uint16_t t, bool Celsius) {
     last_temp_units = temp_units;
     
     // Redraw only the temperature value area
-    tft.fillRect(0, 20, 84, 40, ST7735_BLACK);
+    tft.fillRect(0, 20, 72, 24, ST7735_BLACK);
     tft.setTextSize(TFT_VALUE_SIZE);
     tft.setCursor(0, 20);
     print3d_on_tft(tft, t);
     tft.print(temp_units);
-    tft.setTextSize(TFT_LABEL_SIZE);
 }
 
 void DSPL::tCurr(uint16_t t) {
@@ -478,11 +477,10 @@ void DSPL::tCurr(uint16_t t) {
     last_curr = t;
     
     // Redraw only the current temperature area
-    tft.fillRect(0, 76, 84, 40, ST7735_BLACK);
+    tft.fillRect(0, 76, 52, 24, ST7735_BLACK);
     tft.setTextSize(TFT_VALUE_SIZE);
     tft.setCursor(0, 76);
     print3d_on_tft(tft, t);
-    tft.setTextSize(TFT_LABEL_SIZE);
 }
 
 void DSPL::tInternal(uint16_t t) {
@@ -519,10 +517,7 @@ void DSPL::fanSpeed(uint8_t s) {
     last_fan = fanValue;
     
     // Redraw only the fan speed area
-    tft.fillRect(84, 24, 44, 24, ST7735_BLACK);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(84, 20);
-    tft.print(F("F:"));
+    tft.fillRect(84, 36, 24, 16, ST7735_BLACK);
     tft.setCursor(84, 36);
     tft.setTextSize(TFT_VALUE_SIZE - 1);
     print2d_on_tft(tft, fanValue);
@@ -541,11 +536,8 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
     last_power = p;
     
     // Redraw only the power area
-    tft.fillRect(84, 96, 44, 24, ST7735_BLACK);
-    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.fillRect(84, 92, 24, 16, ST7735_BLACK);
     tft.setCursor(84, 92);
-    tft.print(F("P:"));
-    tft.setCursor(84, 108);
     tft.setTextSize(TFT_VALUE_SIZE - 1);
     print2d_on_tft(tft, p);
 }
@@ -577,22 +569,22 @@ void DSPL::setupMode(byte mode) {
 }
 
 void DSPL::msgON(void) {
-    tft.setCursor(10 * 6, 0);
+    tft.setCursor(10 * 8, 0);
     tft.print(F("    ON"));
 }
 
 void DSPL::msgOFF(void) {
-    tft.setCursor(10 * 6, 0);
+    tft.setCursor(10 * 8, 0);
     tft.print(F("   OFF"));
 }
 
 void DSPL::msgReady(void) {
-    tft.setCursor(10 * 6, 0);
+    tft.setCursor(10 * 8, 0);
     tft.print(F(" Ready"));
 }
 
 void DSPL::msgCold(void) {
-    tft.setCursor(10 * 6, 0);
+    tft.setCursor(10 * 8, 0);
     tft.print(F("  Cold"));
 }
 
