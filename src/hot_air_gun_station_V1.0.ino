@@ -1699,14 +1699,10 @@ void loop() {
 	uint8_t bStatus = rotButton.buttonCheck();
 	switch (bStatus) {
         case 2: // Long press
-            Serial.println("¡BOTON LARGO DETECTADO!"); // <--- AGREGAR ESTO
             nxt = pCurrentScreen->menu_long();
             if (nxt != pCurrentScreen) {
-                Serial.println("Cambiando puntero..."); 
                 pCurrentScreen = nxt;
                 pCurrentScreen->init();
-                // LIMPIEZA DE EVENTOS: Evita que el click largo se interprete 
-                // como un "Enter" dentro del menú nada más entrar.
                 while(rotButton.buttonCheck() != 0);
                 reset_encoder = true;
                 return; 
