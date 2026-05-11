@@ -10,6 +10,8 @@
 #include <EEPROM.h>
 #include <SPI.h>
 
+class configSCREEN;
+
 const uint16_t temp_minC 	= 150;
 const uint16_t temp_maxC	= 500;
 const uint16_t temp_ambC    = 25;
@@ -899,6 +901,7 @@ class mainSCREEN : public SCREEN {
 		virtual void    init(void);
 		virtual SCREEN* show(void);
 		virtual SCREEN* menu(void);
+        virtual SCREEN* menu_long(void);
         virtual SCREEN* reedSwitch(bool on);
 		virtual void	rotaryValue(int16_t value); 						// Setup the preset temperature
         SCREEN*     on;                                                     // Screen mode when the power is
@@ -992,6 +995,11 @@ SCREEN* mainSCREEN::menu(void) {
     return this;
 }
 
+SCREEN* mainSCREEN::menu_long(void) {
+    extern configSCREEN cfgScr; // Usamos el nombre exacto que está en tu setup
+    return (SCREEN*)&cfgScr;    // El (SCREEN*) asegura que el compilador lo vea como una pantalla
+}
+
 SCREEN* mainSCREEN::reedSwitch(bool on) {
     if (on && this->on)
         return this->on;
@@ -1012,6 +1020,7 @@ class workSCREEN : public SCREEN {
 		virtual void    init(void);
 		virtual SCREEN* show(void);
 		virtual SCREEN* menu(void);
+        virtual SCREEN* menu_long(void);
         virtual SCREEN* reedSwitch(bool on);
 		virtual void    rotaryValue(int16_t value); 						// Change the preset temperature
 	private:
@@ -1095,6 +1104,11 @@ SCREEN* workSCREEN::menu(void) {
     return this;
 }
 
+SCREEN* workSCREEN::menu_long(void) {
+    extern configSCREEN cfgScr; 
+    return (SCREEN*)&cfgScr; 
+}
+
 SCREEN* workSCREEN::reedSwitch(bool on) {
     if (!on && next)
         return next;
@@ -1138,7 +1152,7 @@ class configSCREEN : public SCREEN {
         ENCODER*    pEnc;                                                   // Pointer to the rotary encoder instance
         HOTGUN_CFG* pCfg;                                                   // Pointer to the config instance
         uint8_t     mode;                                                   // 0 - hotgun calibrate, 1 - tune, 2 - save, 3 - cancel, 4 - defaults
-        const uint16_t period = 10000;                                      // The period in ms to update the screen
+        const uint16_t period = 500;                                      // The period in ms to update the screen
 };
 
 void configSCREEN::init(void) {
@@ -1146,14 +1160,27 @@ void configSCREEN::init(void) {
     mode = 0;
     pEnc->reset(mode, 0, 4, 1, 0, true);          
     pD->clear();
-    pD->setupMode(0);
-    this->scr_timeout = 30;                                                 // This variable is defined in the superclass
+    
+    // ESTO ES LO QUE FALTA:
+    this->update_screen = 0;   // Resetea el cronómetro de dibujo
+    this->scr_timeout   = 30;  // Segundos antes de volver a OFF
+    
+    pD->setupMode(mode);       // Dibuja el primer elemento del menú
+    forceRedraw();             // Asegura que update_screen sea 0
 }
 
 SCREEN* configSCREEN::show(void) {
+    // Si hay procesos pesados, bajamos el periodo a 200ms para ganar prioridad
     if (millis() < update_screen) return this;
-    update_screen = millis() + period;
-    pD->setupMode(mode);
+    update_screen = millis() + 200; 
+
+    // Forzamos la actualización del display aunque el sensor esté enviando basura
+    pD->clear();
+    pD->setupMode(mode); 
+    
+    // Si usas U8g2 o similar, podrías necesitar un sendBuffer:
+    // pD->sendBuffer(); 
+    
     return this;
 }
 
@@ -1166,7 +1193,10 @@ SCREEN* configSCREEN::menu(void) {
             if (tune) return tune;
             break;
         case 2:                                                             // Save configuration data
-            menu_long();
+            // Guardar configuración
+            pCfg->save(pCfg->tempPreset(), pHG->getFanSpeed());
+            if (next) return next;
+            break;
         case 3:                                                             // Cancel, Return to the main menu
             if (next) return next;
             break;
@@ -1634,6 +1664,7 @@ void setup() {
     tuneScr.next    = &offScr;
 	errScr.next     = &offScr;
 
+
     pCurrentScreen->init();
 }
 
@@ -1658,20 +1689,27 @@ void loop() {
     if (nxt != pCurrentScreen) {
         pCurrentScreen = nxt;
         pCurrentScreen->init();
+        delay(300); // Pequeña pausa para que te dé tiempo a soltar el botón
         reset_encoder = true;
         return;
     }
     
 	uint8_t bStatus = rotButton.buttonCheck();
 	switch (bStatus) {
-		case 2:                                     						// long press;
-			nxt = pCurrentScreen->menu_long();
-			if (nxt != pCurrentScreen) {
-				pCurrentScreen = nxt;
-				pCurrentScreen->init();
+        case 2: // Long press
+            Serial.println("¡BOTON LARGO DETECTADO!"); // <--- AGREGAR ESTO
+            nxt = pCurrentScreen->menu_long();
+            if (nxt != pCurrentScreen) {
+                Serial.println("Cambiando puntero..."); 
+                pCurrentScreen = nxt;
+                pCurrentScreen->init();
+                // LIMPIEZA DE EVENTOS: Evita que el click largo se interprete 
+                // como un "Enter" dentro del menú nada más entrar.
+                while(rotButton.buttonCheck() != 0);
                 reset_encoder = true;
-			}
-			break;
+                return; 
+            }
+            break;
 		case 1:                                     						// short press
 			nxt = pCurrentScreen->menu();
 			if (nxt != pCurrentScreen) {
