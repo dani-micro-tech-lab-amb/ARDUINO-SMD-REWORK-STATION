@@ -549,30 +549,59 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
 }
 
 void DSPL::setupMode(byte mode) {
-    tft.fillScreen(ST7735_BLACK);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(50, 0);
-    tft.print(F("Setup"));
-    tft.setCursor(0, 20);
-    switch (mode) {
-        case 0:                                                             // tip calibrate
-            tft.print(F("calibrate"));
-            break;
-        case 1:                                                             // tune
-            tft.print(F("tune"));
-            break;
-        case 2:                                                             // save
-            tft.print(F("save"));
-            break;
-        case 3:                                                             // cancel
-            tft.print(F("cancel"));
-            break;
-        case 4:                                                             // set defaults
-            tft.print(F("reset config"));
-            break;
-        default:
-            break;
+
+    static bool firstDraw = true;
+    static byte lastMode = 255;
+
+    const uint8_t yPos[] = {20, 38, 56, 74, 92};
+
+    // Dibujar menú una sola vez
+
+    if (firstDraw) {
+
+        tft.fillScreen(ST7735_BLACK);
+
+        tft.setTextSize(TFT_LABEL_SIZE);
+
+        tft.setCursor(50, 0);
+        tft.print(F("Setup"));
+
+        tft.setCursor(20, yPos[0]);
+        tft.print(F("calibrate"));
+
+        tft.setCursor(20, yPos[1]);
+        tft.print(F("tune"));
+
+        tft.setCursor(20, yPos[2]);
+        tft.print(F("save"));
+
+        tft.setCursor(20, yPos[3]);
+        tft.print(F("cancel"));
+
+        tft.setCursor(20, yPos[4]);
+        tft.print(F("reset config"));
+
+        firstDraw = false;
+
+        lastMode = 255;
     }
+
+    if (mode == lastMode && !firstDraw) return;
+
+    // borrar selector anterior SOLO con espacio
+
+    if (lastMode != 255) {
+
+        tft.setCursor(0, yPos[lastMode]);
+        tft.print(F(" "));
+    }
+
+    // dibujar nuevo selector
+
+    tft.setCursor(0, yPos[mode]);
+    tft.print(F(">"));
+
+    lastMode = mode;
 }
 
 void DSPL::msgON(void) {
@@ -1302,40 +1331,70 @@ void configSCREEN::init(void) {
 }
 
 SCREEN* configSCREEN::show(void) {
+
     if (millis() < update_screen) return this;
-    update_screen = millis() + 500; // Actualizar cada 500ms
-    
-    // Dibujar solo si el modo cambió
-    if (last_mode != mode) {
-        last_mode = mode;
+
+    update_screen = millis() + 500;
+
+    // Dibujar pantalla COMPLETA solo la primera vez
+
+    if (last_mode == 255) {
+
         pD->clear();
+
         pD->setupMode(mode);
+
+        last_mode = mode;
+
+        return this;
     }
-    
+
+    // Luego SOLO mover selector
+
+    if (last_mode != mode) {
+
+        pD->setupMode(mode);
+
+        last_mode = mode;
+    }
+
     return this;
 }
 
 SCREEN* configSCREEN::menu(void) {
+
     switch (mode) {
+
         case 0:                                                             // calibrate hotgun
+            last_mode = 255;
             if (calib) return calib;
             break;
+
         case 1:                                                             // Tune potentiometer
+            last_mode = 255;
             if (tune) return tune;
             break;
+
         case 2:                                                             // Save configuration data
             pCfg->save(pCfg->tempPreset(), pHG->getFanSpeed());
+            last_mode = 255;
             if (next) return next;
             break;
+
         case 3:                                                             // Cancel, Return to the main menu
+            last_mode = 255;
             if (next) return next;
             break;
+
         case 4:                                                             // Save defaults
             pCfg->setDefaults(true);
+            last_mode = 255;
             if (next) return next;
             break;
     }
+
     forceRedraw();
+
     return this;
 }
 
