@@ -566,19 +566,19 @@ void DSPL::setupMode(byte mode) {
         tft.setCursor(50, 0);
         tft.print(F("Setup"));
 
-        tft.setCursor(20, yPos[0]);
+        tft.setCursor(15, yPos[0]);
         tft.print(F("calibrate"));
 
-        tft.setCursor(20, yPos[1]);
+        tft.setCursor(15, yPos[1]);
         tft.print(F("tune"));
 
-        tft.setCursor(20, yPos[2]);
+        tft.setCursor(15, yPos[2]);
         tft.print(F("save"));
 
-        tft.setCursor(20, yPos[3]);
+        tft.setCursor(15, yPos[3]);
         tft.print(F("cancel"));
 
-        tft.setCursor(20, yPos[4]);
+        tft.setCursor(15, yPos[4]);
         tft.print(F("reset config"));
 
         firstDraw = false;
