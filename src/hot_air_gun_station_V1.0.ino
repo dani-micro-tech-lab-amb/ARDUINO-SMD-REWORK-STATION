@@ -563,8 +563,12 @@ void DSPL::setupMode(byte mode) {
 
         tft.setTextSize(TFT_LABEL_SIZE);
 
+        tft.setTextColor(ST7735_BLUE);
+
         tft.setCursor(50, 0);
         tft.print(F("Setup"));
+
+        tft.setTextColor(ST7735_WHITE);
 
         tft.setCursor(15, yPos[0]);
         tft.print(F("calibrate"));
