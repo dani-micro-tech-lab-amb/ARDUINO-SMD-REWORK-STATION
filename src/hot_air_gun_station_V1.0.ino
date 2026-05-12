@@ -550,9 +550,10 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
 
 void DSPL::setupMode(byte mode) {
     tft.fillScreen(ST7735_BLACK);
-    tft.setCursor(0, 0);
-    tft.print(F("setup"));
-    tft.setCursor(6, 8);
+    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.setCursor(50, 0);
+    tft.print(F("Setup"));
+    tft.setCursor(0, 20);
     switch (mode) {
         case 0:                                                             // tip calibrate
             tft.print(F("calibrate"));
