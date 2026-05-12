@@ -11,6 +11,8 @@
 #include <EEPROM.h>
 #include <SPI.h>
 
+class configSCREEN;
+
 const uint16_t temp_minC 	= 150;
 const uint16_t temp_maxC	= 500;
 const uint16_t temp_ambC    = 25;
@@ -1018,6 +1020,7 @@ class mainSCREEN : public SCREEN {
 		virtual void    init(void);
 		virtual SCREEN* show(void);
 		virtual SCREEN* menu(void);
+        virtual SCREEN* menu_long(void);
         virtual SCREEN* reedSwitch(bool on);
 		virtual void	rotaryValue(int16_t value); 						// Setup the preset temperature
         SCREEN*     on;                                                     // Screen mode when the power is
@@ -1110,6 +1113,12 @@ SCREEN* mainSCREEN::menu(void) {
     return this;
 }
 
+SCREEN* mainSCREEN::menu_long(void) {
+    // Corrección: Devuelve directamente la pantalla de configuración
+    extern configSCREEN cfgScr; 
+    return (SCREEN*)&cfgScr; 
+}
+
 SCREEN* mainSCREEN::reedSwitch(bool on) {
     if (on && this->on)
         return this->on;
@@ -1130,6 +1139,7 @@ class workSCREEN : public SCREEN {
 		virtual void    init(void);
 		virtual SCREEN* show(void);
 		virtual SCREEN* menu(void);
+        virtual SCREEN* menu_long(void);
         virtual SCREEN* reedSwitch(bool on);
 		virtual void    rotaryValue(int16_t value); 						// Change the preset temperature
 	private:
@@ -1210,6 +1220,12 @@ SCREEN* workSCREEN::menu(void) {
 		mode_temp = true;
 	}
     return this;
+}
+
+SCREEN* workSCREEN::menu_long(void) {
+    // Corrección: Devuelve directamente la pantalla de configuración
+    extern configSCREEN cfgScr; 
+    return (SCREEN*)&cfgScr; 
 }
 
 SCREEN* workSCREEN::reedSwitch(bool on) {
@@ -1794,8 +1810,13 @@ void loop() {
   if (!nxt) {
     uint8_t bStatus = rotButton.buttonCheck();
     if (bStatus == 2) {
+      // Long press - espera a que se suelte el botón
       SCREEN* bNxt = pCurrentScreen->menu_long();
-      if (bNxt != pCurrentScreen) nxt = bNxt;
+      if (bNxt != pCurrentScreen) {
+        nxt = bNxt;
+        // Espera a que se suelte el botón para evitar rebotes
+        while(rotButton.buttonCheck() != 0);
+      }
     } else if (bStatus == 1) {
       SCREEN* bNxt = pCurrentScreen->menu();
       if (bNxt != pCurrentScreen) nxt = bNxt;
