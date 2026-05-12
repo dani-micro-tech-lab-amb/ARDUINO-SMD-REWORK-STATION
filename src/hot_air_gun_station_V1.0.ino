@@ -365,7 +365,7 @@ class DSPL {
     public:
         DSPL(void) : tft(TFT_CS_PIN, TFT_DC_PIN, TFT_RST_PIN) { }
         void    init(void);
-        void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); drawStatic(); }
+        void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); }
         void    drawStatic(void);
         void    tSet(uint16_t t, bool Celsius = true);                      // Show the preset temperature
         void    tCurr(uint16_t t);                                          // Show the current temperature
@@ -1040,6 +1040,8 @@ class mainSCREEN : public SCREEN {
 };
 
 void mainSCREEN::init(void) {
+    pD->clear();
+    pD->drawStatic();
 	pHG->switchPower(false);
 	uint16_t temp_set 	= pHG->getTemp();
 	uint16_t tempH 	    = pCfg->tempHuman(temp_set);         				// The preset temperature in the human readable units
@@ -1154,6 +1156,8 @@ class workSCREEN : public SCREEN {
 };
 
 void workSCREEN::init(void) {
+    pD->clear();
+    pD->drawStatic();
 	uint8_t fs = pHG->getFanSpeed();
     pEnc->reset(fs, 0, 255, 5, 20);
     mode_temp   = false;                                                    // By default adjust the fan speed
@@ -1283,21 +1287,30 @@ class configSCREEN : public SCREEN {
         ENCODER*    pEnc;                                                   // Pointer to the rotary encoder instance
         HOTGUN_CFG* pCfg;                                                   // Pointer to the config instance
         uint8_t     mode;                                                   // 0 - hotgun calibrate, 1 - tune, 2 - save, 3 - cancel, 4 - defaults
+        uint8_t last_mode;
         const uint16_t period = 10000;                                      // The period in ms to update the screen
 };
 
 void configSCREEN::init(void) {
+    last_mode = 255;
     pHG->switchPower(false);
     mode = 0;
     pEnc->reset(mode, 0, 4, 1, 0, true);
-    pD->setupMode(0);
-    this->scr_timeout = 30;                                                 // This variable is defined in the superclass
+    this->scr_timeout = 30;
+    update_screen = 0; // Forzar dibujo inmediato
 }
 
 SCREEN* configSCREEN::show(void) {
     if (millis() < update_screen) return this;
-    update_screen = millis() + period;
-    pD->setupMode(mode);
+    update_screen = millis() + 500; // Actualizar cada 500ms
+    
+    // Dibujar solo si el modo cambió
+    if (last_mode != mode) {
+        last_mode = mode;
+        pD->clear();
+        pD->setupMode(mode);
+    }
+    
     return this;
 }
 
@@ -1310,7 +1323,9 @@ SCREEN* configSCREEN::menu(void) {
             if (tune) return tune;
             break;
         case 2:                                                             // Save configuration data
-            menu_long();
+            pCfg->save(pCfg->tempPreset(), pHG->getFanSpeed());
+            if (next) return next;
+            break;
         case 3:                                                             // Cancel, Return to the main menu
             if (next) return next;
             break;
@@ -1325,7 +1340,6 @@ SCREEN* configSCREEN::menu(void) {
 
 void configSCREEN::rotaryValue(int16_t value) {
     mode = value;
-    forceRedraw();
 }
 
 //---------------------------------------- class calibSCREEN [ tip calibration ] -------------------------------
@@ -1791,6 +1805,9 @@ void loop() {
   static uint32_t last_update         = 0;
   static uint32_t last_screen_change  = 0;
   static bool     boot_guard          = true;
+  static bool     processing_transition = false;
+
+  if (processing_transition) return;
 
   int16_t pos = rotEncoder.read();
   if (reset_encoder) {
@@ -1810,13 +1827,15 @@ void loop() {
   if (!nxt) {
     uint8_t bStatus = rotButton.buttonCheck();
     if (bStatus == 2) {
-      // Long press - espera a que se suelte el botón
+      processing_transition = true;
       SCREEN* bNxt = pCurrentScreen->menu_long();
       if (bNxt != pCurrentScreen) {
         nxt = bNxt;
         // Espera a que se suelte el botón para evitar rebotes
         while(rotButton.buttonCheck() != 0);
+        delay(100);
       }
+      processing_transition = false;
     } else if (bStatus == 1) {
       SCREEN* bNxt = pCurrentScreen->menu();
       if (bNxt != pCurrentScreen) nxt = bNxt;
@@ -1838,15 +1857,24 @@ void loop() {
   // === TRANSICIÓN CORREGIDA ===
   if (nxt && nxt != pCurrentScreen) {
     if (!boot_guard || (millis() > 1000 && millis() - last_screen_change > 500)) {
-      // CORRECCIÓN: Omite clear() si la pantalla destino ya limpia su propio fondo
+      processing_transition = true;
+      
+      // Asegurarse de que no haya conflictos con pantallas anteriores
       if (nxt != &errScr && nxt != &tuneScr && nxt != &clbScr) {
-        disp.clear();
+        // Solo limpiar si es necesario
+        if (pCurrentScreen != &cfgScr) {
+          disp.clear();
+        }
       }
+      
       nxt->init();
       pCurrentScreen = nxt;
       last_screen_change = millis();
       boot_guard = false;
       reset_encoder = true;
+      
+      delay(50);
+      processing_transition = false;
     }
   }
 
