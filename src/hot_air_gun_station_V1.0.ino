@@ -11,6 +11,11 @@
 #include <EEPROM.h>
 #include <SPI.h>
 
+//Correcciones definidas para el perfil de simulador simulador de wokwi, sugiero retirarlas antes de probar en hardware físico
+#define ST7735_RED     0x07E0
+#define ST7735_GREEN   0x001F
+#define ST7735_BLUE    0xF800
+
 class configSCREEN;
 
 const uint16_t temp_minC 	= 150;
@@ -563,7 +568,7 @@ void DSPL::setupMode(byte mode) {
 
         tft.setTextSize(TFT_LABEL_SIZE);
 
-        tft.setTextColor(ST7735_BLUE);
+        tft.setTextColor(ST7735_GREEN);
 
         tft.setCursor(50, 0);
         tft.print(F("Setup"));
@@ -595,13 +600,12 @@ void DSPL::setupMode(byte mode) {
     // borrar selector anterior SOLO con espacio
 
     if (lastMode != 255) {
-
-        tft.setCursor(0, yPos[lastMode]);
-        tft.print(F(" "));
+        tft.fillRect(0, yPos[lastMode], 12, 16, ST7735_BLACK);
     }
 
     // dibujar nuevo selector
 
+    tft.setTextColor(ST7735_BLUE);
     tft.setCursor(0, yPos[mode]);
     tft.print(F(">"));
 
@@ -1296,6 +1300,7 @@ void errorSCREEN::init(void) {
   uint8_t  f = pHG->getFanSpeed();
   uint8_t  p = pHG->appliedPower();
   
+ 
   pD->showError(1, t, f, p); // 1; // Pinta el panel diagnóstico
   pBz->failedBeep();      // Alerta sonora
 }
@@ -1915,6 +1920,7 @@ void loop() {
     if (current_time > ac_check) {
       ac_check = current_time + 1000;
       if (!hg.areExternalInterrupts()) nxt = &errScr;
+      
     }
   }
 
