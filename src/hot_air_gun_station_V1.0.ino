@@ -16,6 +16,9 @@
 #define ST7735_GREEN   0x001F
 #define ST7735_BLUE    0xF800
 
+//COLORES ADICIONALES
+#define ST7735_YELLOW 0x07FF
+
 class configSCREEN;
 
 const uint16_t temp_minC 	= 150;
@@ -414,6 +417,7 @@ void DSPL::init(void) {
 }
 void DSPL::drawStatic(void) {
     // Draw all static elements (labels) once
+    tft.setTextColor(ST7735_YELLOW);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.setCursor(20, 5);
     tft.print(F("SET"));
@@ -428,6 +432,8 @@ void DSPL::drawStatic(void) {
     tft.print(F("SPEED"));
     tft.setCursor(104, 74);
     tft.print(F("POWER"));
+    //Vuelve a dejar en blanco el tipo de letra para los valores
+    tft.setTextColor(ST7735_WHITE);
 }
 
 static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value) {
@@ -558,7 +564,7 @@ void DSPL::setupMode(byte mode) {
     static bool firstDraw = true;
     static byte lastMode = 255;
 
-    const uint8_t yPos[] = {20, 38, 56, 74, 92};
+    const uint8_t yPos[] = {25, 45, 65, 85, 105};
 
     // Dibujar menú una sola vez
 
@@ -567,28 +573,27 @@ void DSPL::setupMode(byte mode) {
         tft.fillScreen(ST7735_BLACK);
 
         tft.setTextSize(TFT_LABEL_SIZE);
-
         tft.setTextColor(ST7735_GREEN);
 
-        tft.setCursor(50, 0);
-        tft.print(F("Setup"));
+        tft.setCursor(50, 5);
+        tft.print(F("SETUP"));
 
         tft.setTextColor(ST7735_WHITE);
 
         tft.setCursor(15, yPos[0]);
-        tft.print(F("calibrate"));
+        tft.print(F("Calibrate"));
 
         tft.setCursor(15, yPos[1]);
-        tft.print(F("tune"));
+        tft.print(F("Tune"));
 
         tft.setCursor(15, yPos[2]);
-        tft.print(F("save"));
+        tft.print(F("Save"));
 
         tft.setCursor(15, yPos[3]);
-        tft.print(F("cancel"));
+        tft.print(F("Cancel"));
 
         tft.setCursor(15, yPos[4]);
-        tft.print(F("reset config"));
+        tft.print(F("Reset config"));
 
         firstDraw = false;
 
@@ -600,14 +605,14 @@ void DSPL::setupMode(byte mode) {
     // borrar selector anterior SOLO con espacio
 
     if (lastMode != 255) {
-        tft.fillRect(0, yPos[lastMode], 12, 16, ST7735_BLACK);
+        tft.fillRect(2, yPos[lastMode], 12, 16, ST7735_BLACK);
     }
 
     // dibujar nuevo selector
 
-    tft.setTextColor(ST7735_BLUE);
-    tft.setCursor(0, yPos[mode]);
-    tft.print(F(">"));
+    tft.setTextColor(ST7735_YELLOW);
+    tft.setCursor(2, yPos[mode]);
+    tft.write(16);
 
     lastMode = mode;
 }
