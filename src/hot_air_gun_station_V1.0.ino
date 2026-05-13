@@ -15,9 +15,7 @@
 #define ST7735_RED     0x07E0
 #define ST7735_GREEN   0x001F
 #define ST7735_BLUE    0xF800
-
-//COLORES ADICIONALES
-#define ST7735_YELLOW 0x07FF
+#define ST7735_YELLOW  0x07FF
 
 class configSCREEN;
 
