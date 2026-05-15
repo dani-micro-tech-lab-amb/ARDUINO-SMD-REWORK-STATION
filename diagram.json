@@ -4,7 +4,7 @@
   "editor": "wokwi",
   "parts": [
     { "type": "wokwi-arduino-uno", "id": "uno", "top": 19.8, "left": 28.2, "attrs": {} },
-    { "type": "wokwi-ky-040", "id": "encoder1", "top": -209.5, "left": 18.4, "attrs": {} },
+    { "type": "wokwi-ky-040", "id": "encoder1", "top": -238.3, "left": 18.4, "attrs": {} },
     {
       "type": "wokwi-buzzer",
       "id": "bz1",
