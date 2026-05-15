@@ -37,7 +37,6 @@
   ],
   "connections": [
     [ "uno:8", "bz1:2", "green", [ "v0" ] ],
-    [ "lcd1:RS", "lcd1:V0", "green", [ "v0" ] ],
     [ "lcd1:RS", "uno:12", "green", [ "v19.2", "h-239.7" ] ],
     [ "lcd1:E", "uno:10", "green", [ "v38.4", "h-288" ] ],
     [ "lcd1:D7", "uno:6", "green", [ "v48", "h-326.1" ] ],
