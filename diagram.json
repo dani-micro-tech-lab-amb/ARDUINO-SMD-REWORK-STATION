@@ -24,7 +24,7 @@
       "id": "r1",
       "top": 282.35,
       "left": 432,
-      "attrs": { "value": "1000" }
+      "attrs": { "value": "220" }
     },
     { "type": "wokwi-potentiometer", "id": "pot_temp", "top": 373.1, "left": 479.8, "attrs": {} },
     {
