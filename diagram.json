@@ -24,7 +24,7 @@
       "type": "wokwi-resistor",
       "id": "r1",
       "top": 243.95,
-      "left": 432,
+      "left": 480,
       "attrs": { "value": "220" }
     }
   ],
@@ -46,7 +46,10 @@
     [ "uno:GND.2", "lcd1:K", "black", [ "v57.5", "h435.9" ] ],
     [ "uno:GND.1", "bz1:1", "black", [ "v-28.8", "h-47.7" ] ],
     [ "pot_contrast:SIG", "lcd1:V0", "green", [ "v153.6", "h66.8" ] ],
-    [ "pot_contrast:VCC", "uno:5V", "red", [ "v499.2", "h-96.8" ] ]
+    [ "pot_contrast:VCC", "uno:5V", "red", [ "v499.2", "h-96.8" ] ],
+    [ "lcd1:RW", "uno:GND.2", "black", [ "v451.2", "h-124.9" ] ],
+    [ "lcd1:VSS", "uno:GND.2", "black", [ "v451.2", "h9.6" ] ],
+    [ "lcd1:VDD", "uno:5V", "green", [ "v470.4", "h0.1" ] ]
   ],
   "dependencies": {}
 }
