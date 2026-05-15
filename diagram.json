@@ -13,7 +13,13 @@
       "attrs": { "volume": "0.1" }
     },
     { "type": "wokwi-lcd1602", "id": "lcd1", "top": -351.77, "left": 419.2, "attrs": {} },
-    { "type": "wokwi-potentiometer", "id": "pot_contrast", "top": -318.1, "left": 335.8, "attrs": {} },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_contrast",
+      "top": -318.1,
+      "left": 335.8,
+      "attrs": {}
+    },
     {
       "type": "wokwi-resistor",
       "id": "r1",
@@ -28,7 +34,6 @@
     [ "encoder1:DT", "uno:3", "green", [ "h0" ] ],
     [ "encoder1:CLK", "uno:4", "green", [ "h0" ] ],
     [ "uno:8", "bz1:2", "green", [ "v0" ] ],
-    [ "lcd1:RS", "lcd1:V0", "green", [ "v0" ] ],
     [ "lcd1:RS", "uno:12", "green", [ "v19.2", "h-239.7" ] ],
     [ "lcd1:D6", "uno:13", "green", [ "v28.8", "h-383.8" ] ],
     [ "lcd1:E", "uno:10", "green", [ "v38.4", "h-288" ] ],
