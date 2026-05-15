@@ -1,3 +1,4 @@
+
 {
   "version": 1,
   "author": "Dani Micro Tech Lab AMB",
@@ -23,7 +24,7 @@
       "type": "wokwi-resistor",
       "id": "r1",
       "top": 282.35,
-      "left": 432,
+      "left": 489.6,
       "attrs": { "value": "220" }
     },
     { "type": "wokwi-potentiometer", "id": "pot_temp", "top": 373.1, "left": 479.8, "attrs": {} },
@@ -55,7 +56,10 @@
     [ "pot_air_flow:SIG", "uno:A5", "green", [ "v57.6", "h-96.4" ] ],
     [ "pot_contrast:SIG", "lcd1:V0", "green", [ "v153.6", "h57.2" ] ],
     [ "pot_contrast:VCC", "uno:5V", "red", [ "v537.6", "h-192.8" ] ],
-    [ "uno:GND.1", "bz1:1", "black", [ "v-28.8", "h-57.3" ] ]
+    [ "uno:GND.1", "bz1:1", "black", [ "v-28.8", "h-57.3" ] ],
+    [ "uno:5V", "lcd1:VDD", "red", [ "v76.7", "h263" ] ],
+    [ "uno:GND.2", "lcd1:VSS", "black", [ "v105.5", "h253.5" ] ],
+    [ "uno:GND.2", "lcd1:RW", "black", [ "v57.5", "h138.3" ] ]
   ],
   "dependencies": {}
 }
