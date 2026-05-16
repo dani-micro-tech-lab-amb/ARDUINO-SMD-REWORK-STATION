@@ -495,7 +495,7 @@ void DSPL::setupMode(byte mode) {
             LiquidCrystal::print(F("calibrate"));
             break;
         case 1:                                                             // tune
-            LiquidCrystal::print(F("tune"));
+            LiquidCrystal::print(F("heater test"));
             break;
         case 2:                                                             // save
             LiquidCrystal::print(F("save"));
@@ -539,7 +539,7 @@ void DSPL::msgFail(void) {
 
 void DSPL::msgTune(void) {
     LiquidCrystal::setCursor(0, 0);
-    LiquidCrystal::print(F("Tune"));
+    LiquidCrystal::print(F("HTR Test"));
 }
 
 //------------------------------------------ class HISTORY ----------------------------------------------------
