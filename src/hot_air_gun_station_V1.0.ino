@@ -373,12 +373,15 @@ class DSPL {
         void    init(void);
         void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); }
         void    drawStatic(void);
-        void    tSet(uint16_t t, bool Celsius = true);                      // Show the preset temperature
-        void    tCurr(uint16_t t);                                          // Show the current temperature
+        void    drawCalibrationStatic(void);
+        void    drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     //Show tempEratures
+        void    drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize);  //show percentages
+        void    tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     // Show the preset temperature
+        void    tCurr(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);    // Show the current temperature
         void    tInternal(uint16_t t);                                      // Show the current temperature in internal units
         void    tReal(uint16_t t);                                          // Show the real temperature in Celsius in calibrate mode
-        void    fanSpeed(uint8_t s);                                        // Show the fan speed
-		void	appliedPower(uint8_t p, bool show_zero = true);			    // Show applied power (%)
+        void    fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize);                                        // Show the fan speed
+		void	appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool show_zero = true);			    // Show applied power (%)
         void    setupMode(uint8_t mode);
         void    msgON(void);                                                // Show message: "ON"
         void    msgOFF(void);
@@ -413,6 +416,39 @@ void DSPL::init(void) {
   last_power = 0xff;
   last_on_state = false;
 }
+
+void DSPL::drawCalibrationStatic(void) {
+
+    tft.fillScreen(ST7735_BLACK);
+
+    // Title
+    tft.fillRect(0, 0, 160, 14, ST7735_BLUE);
+
+    tft.setTextColor(ST7735_WHITE);
+    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.setCursor(18, 0);
+    tft.print(F("Calibration"));
+
+    // Left column
+    tft.setTextColor(ST7735_YELLOW);
+
+    tft.setCursor(20, 18);
+    tft.print(F("SET"));
+
+    tft.setCursor(20, 53);
+    tft.print(F("CUR"));
+
+    tft.setCursor(20, 105);
+    tft.print(F("STATE"));
+
+    // Right column
+    tft.setCursor(104, 18);
+    tft.print(F("FAN"));
+
+    tft.setCursor(104, 68);
+    tft.print(F("HTR"));
+}
+
 void DSPL::drawStatic(void) {
     // Draw all static elements (labels) once
     tft.setTextColor(ST7735_YELLOW);
@@ -421,6 +457,8 @@ void DSPL::drawStatic(void) {
     tft.print(F("SET"));
     tft.setCursor(20, 56);
     tft.print(F("CUR"));
+    tft.setCursor(20, 105);
+    tft.print(F("STATE"));
     tft.setCursor(104, 5);
     tft.print(F("FAN"));
     tft.setCursor(104, 56);
@@ -462,34 +500,24 @@ static void print2d_on_tft(Adafruit_ST7735 &tft, uint8_t value) {
     tft.print(buf);
 }
 
-void DSPL::tSet(uint16_t t, bool Celsius) {
-    if (Celsius) {
-        temp_units = 'C';
-    } else {
-        temp_units = 'F';
-    }
-    if ((t == last_set) && (temp_units == last_temp_units)) return;
+void DSPL::tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize) {
+    if (t == last_set) return;
     last_set = t;
-    last_temp_units = temp_units;
-    
-    // Redraw only the temperature value area
-    tft.fillRect(20, 25, 72, 24, ST7735_BLACK);
-    tft.setTextSize(TFT_VALUE_SIZE);
-    tft.setTextColor(ST7735_WHITE);
-    tft.setCursor(20, 25);
-    print3d_on_tft(tft, t);
-    tft.print(temp_units);
+    drawTemp(t, x, y, textSize);
 }
 
-void DSPL::tCurr(uint16_t t) {
+void DSPL::tCurr(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize) {
     if (t == last_curr) return;
-    last_curr = t;
-    
+    last_curr = t; 
+    drawTemp(t, x, y, textSize);
+}
+
+void DSPL::drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize){
     // Redraw only the current temperature area
-    tft.fillRect(20, 76, 72, 24, ST7735_BLACK);
-    tft.setTextSize(TFT_VALUE_SIZE);
-    tft.setTextColor(ST7735_WHITE);
-    tft.setCursor(20, 76);
+    tft.fillRect(x, y, textSize*24, textSize*8, ST7735_BLACK);
+    tft.setTextSize(textSize);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setCursor(x, y);
     print3d_on_tft(tft, t);
     tft.print(temp_units);
 }
@@ -530,20 +558,16 @@ void DSPL::tReal(uint16_t t) {
     tft.print(buff);
 }
 
-void DSPL::fanSpeed(uint8_t s) {
+void DSPL::fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize) {
     uint8_t fanValue = map(s, 0, 255, 0, 99);
     if (fanValue == last_fan) return;
     last_fan = fanValue;
     
     // Redraw only the fan speed area
-    tft.fillRect(104, 35, 24, 16, ST7735_BLACK);
-    tft.setCursor(104, 35);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setTextColor(ST7735_WHITE);
-    print2d_on_tft(tft, fanValue);
+    drawPercent(fanValue, x, y, textSize);
 }
 
-void DSPL::appliedPower(uint8_t p, bool show_zero) {
+void DSPL::appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool show_zero) {
 
     if (p > 99) p = 99;
 
@@ -553,7 +577,7 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
 
             last_power = 0xff;
 
-            tft.fillRect(104, 96, 44, 24, ST7735_BLACK);
+            tft.fillRect(x, y, textSize * 24, textSize * 8, ST7735_BLACK);
         }
 
         return;
@@ -564,17 +588,16 @@ void DSPL::appliedPower(uint8_t p, bool show_zero) {
     last_power = p;
 
     // Redraw only the power area
+    drawPercent(p, x, y, textSize);
+}
 
-    tft.fillRect(104, 86, 36, 16, ST7735_BLACK);
-
-    tft.setCursor(104, 86);
-
-    tft.setTextSize(TFT_LABEL_SIZE);
-
-    tft.setTextColor(ST7735_WHITE);
-
-    print2d_on_tft(tft, p);
-
+void DSPL::drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize){
+    // Redraw only the percentage temperature area
+    tft.fillRect(x, y, textSize*24, textSize*8, ST7735_BLACK);
+    tft.setTextSize(textSize);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setCursor(x, y);
+    print3d_on_tft(tft, percentage);
     tft.print(F("%"));
 }
 
@@ -637,16 +660,16 @@ void DSPL::setupMode(byte mode) {
 }
 
 void DSPL::msgON(void) {
-    tft.fillRect(20, 105, 36, 16, ST7735_BLACK);
-    tft.setCursor(20, 105);
+    tft.fillRect(104, 105, 36, 16, ST7735_BLACK);
+    tft.setCursor(104, 105);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.setTextColor(ST7735_GREEN);
     tft.print(F("ON"));
 }
 
 void DSPL::msgOFF(void) {
-    tft.fillRect(20, 105, 36, 16, ST7735_BLACK);
-    tft.setCursor(20, 105);
+    tft.fillRect(104, 105, 36, 16, ST7735_BLACK);
+    tft.setCursor(104, 105);
     tft.setTextSize(TFT_LABEL_SIZE);
     tft.setTextColor(ST7735_RED);
     tft.print(F("OFF"));
@@ -696,15 +719,16 @@ void DSPL::msgTune(void) {
     tft.setCursor(20, 25);
     tft.print(F("CUR"));
 
-    tft.setCursor(104, 56);
-    tft.print(F("HTR"));
-
-    tft.setCursor(20, 85);
+    tft.setCursor(20, 105);
     tft.print(F("STATE"));
 
     tft.setTextSize(TFT_SMALL_SIZE);
     tft.setCursor(104, 23);
-    tft.print(F("FAN SPEED"));
+    tft.print(F("FAN"));
+    tft.setCursor(104, 33);
+    tft.print(F("SPEED"));
+    tft.setCursor(104, 64);
+    tft.print(F("HTR"));
     tft.setCursor(104, 74);
     tft.print(F("POWER"));
 }
@@ -1154,10 +1178,10 @@ void mainSCREEN::rotaryValue(int16_t value) {
 	if (mode_temp) {														// set hot gun temperature
 		uint16_t temp = pCfg->tempInternal(value);
 		pHG->setTemp(temp);
-		pD->tSet(value);
+		pD->tSet(value, 20, 25, TFT_VALUE_SIZE);
 	} else {																// set fan speed
 		pHG->setFanSpeed(value);
-		pD->fanSpeed(value);
+		pD->fanSpeed(value, 92, 35, TFT_LABEL_SIZE);
 	}
 	update_screen  = millis() + period;
 }
@@ -1172,7 +1196,7 @@ SCREEN* mainSCREEN::show(void) {
 	}
 
     uint16_t temp_set = pHG->getTemp();
-    pD->tSet(pCfg->tempHuman(temp_set));
+    pD->tSet(pCfg->tempHuman(temp_set), 20, 25, TFT_VALUE_SIZE);
 	uint16_t temp  = pHG->tempAverage();
 	uint16_t tempH = pCfg->tempHuman(temp);
 	if (pCfg->isCold(temp)) {
@@ -1189,9 +1213,9 @@ SCREEN* mainSCREEN::show(void) {
 	} else {
         pD->msgOFF();
 	}
-	pD->tCurr(tempH);
-    pD->appliedPower(0, false);
-    pD->fanSpeed(pHG->getFanSpeed());
+	pD->tCurr(tempH, 20, 76, TFT_VALUE_SIZE);
+    pD->appliedPower(0, 92, 86, TFT_LABEL_SIZE, false);
+    pD->fanSpeed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
 	return this;
 }
 
@@ -1265,10 +1289,10 @@ void workSCREEN::rotaryValue(int16_t value) {   							// Setup new preset tempe
         ready = false;
 		uint16_t temp = pCfg->tempInternal(value);      				    // Translate human readable temperature into internal value
 		pHG->setTemp(temp);
-		pD->tSet(value);
+		pD->tSet(value, 20, 25, TFT_VALUE_SIZE);
 	} else {
 		pHG->setFanSpeed(value);
-		pD->fanSpeed(value);
+		pD->fanSpeed(value, 92, 35, TFT_LABEL_SIZE);
 	}
 	update_screen = millis() + period;
 }
@@ -1279,14 +1303,14 @@ SCREEN* workSCREEN::show(void) {
 
     int temp_set  = pHG->getTemp();
     int tempH_set = pCfg->tempHuman(temp_set);
-    pD->tSet(tempH_set);
+    pD->tSet(tempH_set, 20, 25, TFT_VALUE_SIZE);
     int temp      = pHG->tempAverage();
     int tempH     = pCfg->tempHuman(temp);
-    pD->tCurr(tempH);
+    pD->tCurr(tempH, 20, 76, TFT_VALUE_SIZE);
     pD->msgON();
 	uint8_t p 	= pHG->appliedPower();
-	pD->appliedPower(p);
-    pD->fanSpeed(pHG->getFanSpeed());
+	pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
+    pD->fanSpeed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
 
     
 Serial.print("Diff = "); Serial.print(temp_set - temp);
@@ -1509,6 +1533,7 @@ void calibSCREEN::init(void) {
         calib_temp[0][i] = temp_tip[i];
     pCfg->getCalibrationData(&calib_temp[1][0]);
     pD->clear();
+    pD->drawCalibrationStatic();
     pD->msgOFF();
     uint16_t temp = temp_tip[mode];
     preset_temp = pHG->getTemp();                                           // Preset Temp in internal units
@@ -1525,12 +1550,12 @@ SCREEN* calibSCREEN::show(void) {
     int temp_set        = pHG->getTemp();                                   // The preset 
     uint16_t tempH      = pCfg->tempHuman(temp);
     uint16_t temp_setH  = pCfg->tempHuman(temp_set);
-    pD->tSet(temp_setH);
-    pD->tCurr(tempH);
+    pD->tSet(temp_setH, 20, 35, TFT_LABEL_SIZE);
+    pD->tCurr(tempH, 20, 76, TFT_LABEL_SIZE);
 
     uint8_t p = pHG->appliedPower();
     if (!pHG->isOn()) p = 0;
-    pD->appliedPower(p);
+    pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
     if (tune && (abs(temp_set - temp) < 5) && (pHG->tempDispersion() <= 20) && (p > 1))  {
         if (!ready) {
             pBz->shortBeep();
@@ -1542,7 +1567,7 @@ SCREEN* calibSCREEN::show(void) {
         pD->tReal(pEnc->read());
     } else {
         if (pHG->isOn())
-            pD->fanSpeed(pHG->getFanSpeed());
+            pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
     }
     if (tune && !pHG->isOn()) {                                             // The hot gun was switched off by error
         pD->msgOFF();
@@ -1670,7 +1695,7 @@ void tuneSCREEN::init(void) {
     pD->clear();
     pD->msgTune();
     pD->msgOFF();
-    pD->fanSpeed(255);
+    pD->fanSpeed(255, 92, 45, TFT_LABEL_SIZE);
     forceRedraw();
 }
 
@@ -1692,8 +1717,8 @@ SCREEN* tuneSCREEN::show(void) {
         power = pEnc->read();
     }
     pD->tInternal(temp);
-    pD->appliedPower(power);
-    pD->fanSpeed(pHG->getFanSpeed());
+    pD->appliedPower(power, 92, 86, TFT_LABEL_SIZE);
+    pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
     if (heat_ms && ((millis() - heat_ms) > 3000) && (pHG->tempDispersion() < 10) && (power > 1)) {
         pBz->shortBeep();
         heat_ms = 0;
