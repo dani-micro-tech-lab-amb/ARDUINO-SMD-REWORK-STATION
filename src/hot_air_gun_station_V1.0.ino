@@ -371,9 +371,10 @@ class DSPL {
     public:
         DSPL(void) : tft(TFT_CS_PIN, TFT_DC_PIN, TFT_RST_PIN) { }
         void    init(void);
+        void    invalidateCache(void);
         void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); }
         void    drawStatic(void);
-        void    drawCalibrationStatic(void);
+        void    drawCalibrationLayout(bool tune, bool ready);
         void    drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     //Show tempEratures
         void    drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize);  //show percentages
         void    tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     // Show the preset temperature
@@ -417,36 +418,76 @@ void DSPL::init(void) {
   last_on_state = false;
 }
 
-void DSPL::drawCalibrationStatic(void) {
+void DSPL::invalidateCache(void) {
+
+    last_set = 65535;
+    last_curr = 65535;
+
+    last_power = 255;
+    last_fan = 255;
+}
+
+void DSPL::drawCalibrationLayout(bool tune, bool ready) {
 
     tft.fillScreen(ST7735_BLACK);
 
-    // Title
+    // Title bar
     tft.fillRect(0, 0, 160, 14, ST7735_BLUE);
 
     tft.setTextColor(ST7735_WHITE);
     tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(18, 0);
+    tft.setCursor(10, 0);
     tft.print(F("Calibration"));
 
-    // Left column
     tft.setTextColor(ST7735_YELLOW);
 
-    tft.setCursor(20, 18);
-    tft.print(F("SET"));
+    // =========================
+    // Selection state
+    // =========================
+    if (!tune) {
 
-    tft.setCursor(20, 53);
-    tft.print(F("CUR"));
+        tft.setCursor(20, 18);
+        tft.print(F("SET"));
 
-    tft.setCursor(20, 105);
-    tft.print(F("STATE"));
+        tft.setCursor(20, 105);
+        tft.print(F("STATE"));
+    }
 
-    // Right column
-    tft.setCursor(104, 18);
-    tft.print(F("FAN"));
+    // =========================
+    // Heating state
+    // =========================
+    else if (tune && !ready) {
 
-    tft.setCursor(104, 68);
-    tft.print(F("HTR"));
+        tft.setCursor(20, 18);
+        tft.print(F("SET"));
+
+        tft.setCursor(20, 64);
+        tft.print(F("CUR"));
+
+        tft.setCursor(104, 18);
+        tft.print(F("FAN"));
+
+        tft.setCursor(104, 64);
+        tft.print(F("HTR"));
+
+        tft.setCursor(20, 105);
+        tft.print(F("STATE"));
+    }
+
+    // =========================
+    // Ready state
+    // =========================
+    else {
+
+        tft.setCursor(20, 18);
+        tft.print(F("SET"));
+
+        tft.setCursor(20, 64);
+        tft.print(F("MEAS"));
+
+        tft.setCursor(20, 105);
+        tft.print(F("STATE"));
+    }
 }
 
 void DSPL::drawStatic(void) {
@@ -1519,61 +1560,162 @@ class calibSCREEN : public SCREEN {
         uint16_t        preset_temp;                                        // The preset temp in human readable units
         bool            ready;                                              // Whether the temperature has been established
         bool            tune;                                               // Whether the parameter is modifiying
+        bool last_tune;
+        bool last_ready;
         const uint32_t  period   = 1000;                                    // Update screen period
         const uint16_t  temp_max = 900;
 };
 
 void calibSCREEN::init(void) {
+
     mode = 0;
-    pEnc->reset(mode, 0, 2, 1, 0, true);                                    // Select the reference temperature: 0 - temp_tip[0], 1 - temp_tip[1], 2 - temp_tip[2]
+
+    pEnc->reset(mode, 0, 2, 1, 0, true);
+
     pHG->switchPower(false);
+
     tune  = false;
     ready = false;
+
+    last_tune  = false;
+    last_ready = false;
+
     for (uint8_t i = 0; i < 3; ++i)
         calib_temp[0][i] = temp_tip[i];
+
     pCfg->getCalibrationData(&calib_temp[1][0]);
+
     pD->clear();
-    pD->drawCalibrationStatic();
+
+    // Draw initial layout
+    pD->drawCalibrationLayout(tune, ready);
+
+    pD->invalidateCache();
+
     pD->msgOFF();
+
     uint16_t temp = temp_tip[mode];
-    preset_temp = pHG->getTemp();                                           // Preset Temp in internal units
-    preset_temp = pCfg->tempHuman(preset_temp);                             // Save the preset temperature in Celsius
+
+    preset_temp = pHG->getTemp();
+
+    preset_temp = pCfg->tempHuman(preset_temp);
+
     uint16_t temp_set = pCfg->tempInternal(temp);
+
     pHG->setTemp(temp_set);
+
     forceRedraw();
 }
 
 SCREEN* calibSCREEN::show(void) {
-    if (millis() < update_screen) return this;
-    update_screen       = millis() + period;
-    int temp            = pHG->tempAverage();                               // The Hot gun average value of the current temp. (internal)
-    int temp_set        = pHG->getTemp();                                   // The preset 
-    uint16_t tempH      = pCfg->tempHuman(temp);
-    uint16_t temp_setH  = pCfg->tempHuman(temp_set);
-    pD->tSet(temp_setH, 20, 35, TFT_LABEL_SIZE);
-    pD->tCurr(tempH, 20, 76, TFT_LABEL_SIZE);
 
-    uint8_t p = pHG->appliedPower();
-    if (!pHG->isOn()) p = 0;
-    pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
-    if (tune && (abs(temp_set - temp) < 5) && (pHG->tempDispersion() <= 20) && (p > 1))  {
-        if (!ready) {
-            pBz->shortBeep();
-            pD->msgReady();
-            ready = true;
-            }
+    // Detect UI state changes first
+    if ((tune != last_tune) || (ready != last_ready)) {
+
+        last_tune  = tune;
+        last_ready = ready;
+
+        pD->drawCalibrationLayout(tune, ready);
+
+        pD->invalidateCache();
     }
-    if (ready) {
-        pD->tReal(pEnc->read());
-    } else {
-        if (pHG->isOn())
-            pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
-    }
-    if (tune && !pHG->isOn()) {                                             // The hot gun was switched off by error
+
+    // Refresh timer
+    if (millis() < update_screen)
+        return this;
+
+    update_screen = millis() + period;
+
+    // Temperature readings
+    int temp       = pHG->tempAverage();
+    int temp_set   = pHG->getTemp();
+
+    uint16_t tempH     = pCfg->tempHuman(temp);
+    uint16_t temp_setH = pCfg->tempHuman(temp_set);
+
+    // Always show SET temperature
+    pD->tSet(temp_setH, 20, 35, TFT_VALUE_SIZE);
+
+    // =========================
+    // Selection state
+    // =========================
+    if (!tune) {
+
         pD->msgOFF();
+    }
+
+    // =========================
+    // Heating state
+    // =========================
+    if (tune && !ready) {
+
+        pD->msgON();
+
+        pD->tCurr(
+            tempH,
+            20,
+            81,
+            TFT_VALUE_SIZE
+        );
+
+        uint8_t p = pHG->appliedPower();
+
+        if (!pHG->isOn())
+            p = 0;
+
+        pD->appliedPower(
+            p,
+            92,
+            86,
+            TFT_LABEL_SIZE
+        );
+
+        pD->fanSpeed(
+            pHG->getFanSpeed(),
+            92,
+            45,
+            TFT_LABEL_SIZE
+        );
+
+        // Detect stabilized temperature
+        if ((abs(temp_set - temp) < 5) &&
+            (pHG->tempDispersion() <= 20) &&
+            (p > 1)) {
+
+            pBz->shortBeep();
+
+            ready = true;
+        }
+    }
+
+    // =========================
+    // Ready state
+    // =========================
+    if (ready) {
+
+        pD->msgReady();
+
+        pD->tReal(
+            pEnc->read()
+        );
+    }
+
+    // Hotgun switched OFF unexpectedly
+    if (tune && !pHG->isOn()) {
+
         tune  = false;
         ready = false;
+
+        pD->msgOFF();
+
+        pD->drawCalibrationLayout(
+            tune,
+            ready
+        );
+
+        pD->invalidateCache();
     }
+
     return this;
 }
 
@@ -1595,7 +1737,6 @@ SCREEN* calibSCREEN::menu(void) {
         calib_temp[0][mode] = pEnc->read();                                 // Real temperature (Celsius)
         calib_temp[1][mode] = pHG->tempAverage();                           // The temperature on the hot gun
         pHG->switchPower(false);
-        pD->msgOFF();
         pEnc->reset(mode, 0, 2, 1, 0, true);                                // The temperature limit has been adjusted, switch to select mode
         uint16_t tip[3];
         buildCalibration(tip);
@@ -1607,9 +1748,9 @@ SCREEN* calibSCREEN::menu(void) {
         temp = pCfg->tempInternal(temp);
         pHG->setTemp(temp);
         pHG->switchPower(true);
-        pD->msgON();
     }
     ready = false;
+    update_screen = 0;
     forceRedraw();
     return this;
 }
