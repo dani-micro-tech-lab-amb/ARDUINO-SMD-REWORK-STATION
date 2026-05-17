@@ -16,6 +16,7 @@
 #define ST7735_GREEN   0x001F
 #define ST7735_BLUE    0xF800
 #define ST7735_YELLOW  0x07FF
+#define ST7735_CYAN   0xF81F
 
 class configSCREEN;
 
@@ -36,6 +37,28 @@ const uint8_t R_BUTN_PIN	= 5;                                            // Rota
 const uint8_t REED_SW_PIN   = 12;                                            // Reed switch pin moved to D12 to free D11 for display
 const uint8_t BUZZER_PIN	= 8;                                            // Buzzer pin
 
+constexpr uint8_t COL_LEFT  = 20;
+constexpr uint8_t COL_RIGHT = 104;
+
+static const char TXT_READY[]      PROGMEM = "READY";
+static const char TXT_ADJUST[]     PROGMEM = "ADJUSTING...";
+static const char TXT_SET[]        PROGMEM = "SET";
+static const char TXT_STATE[]      PROGMEM = "STATE";
+static const char TXT_CUR[]        PROGMEM = "CUR";
+static const char TXT_MEAS[]       PROGMEM = "MEAS";
+static const char TXT_POWER[]      PROGMEM = "POWER";
+static const char TXT_FAN[]        PROGMEM = "FAN";
+static const char TXT_SPEED[]      PROGMEM = "SPEED";
+static const char TXT_HTR[]        PROGMEM = "HTR";
+static const char TXT_OFF[]        PROGMEM = "OFF";
+static const char TXT_ON[]         PROGMEM = "ON";
+static const char TXT_HOLD[]       PROGMEM = "HOLD";
+static const char TXT_COLD[]       PROGMEM = "COLD";
+static const char TXT_CALIBRATION[] PROGMEM = "CALIBRATION";
+static const char TXT_OK[] PROGMEM = "OK";
+
+#define FS(x) ((__FlashStringHelper*)(x))
+
 #define TFT_CS_PIN  6      // CS on D6 matches Wokwi test code
 #define TFT_DC_PIN  10     // DC on D10 matches Wokwi test code
 #define TFT_RST_PIN A1     // Use free analog pin A1 for TFT reset
@@ -46,6 +69,8 @@ const uint8_t BUZZER_PIN	= 8;                                            // Buzz
 
 #define TFT_CHAR_W(s) (6 * (s))
 #define TFT_CHAR_H(s) (8 * (s))
+
+//#define SIMULATION_MODE //Se agrega para fines de poder corregir cualquier posible problema con la interfaz de la calibración.
 
 //------------------------------------------ Configuration data ------------------------------------------------
 /* Config record in the EEPROM has the following format:
@@ -374,20 +399,25 @@ class DSPL {
         void    invalidateCache(void);
         void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); }
         void    drawStatic(void);
-        void    drawCalibrationLayout(bool tune, bool ready);
+        void    drawCalibrationIntro(void);
+        void    drawCalibrationChecklist(uint8_t mode);
+        void    drawCalibrationLayout(bool ready);
+        void    drawCalibrationLayoutBase();
+        void    drawCalibrationSaved(uint16_t point);
+        void    drawCalibrationModeLabel(bool ready);
+        void    drawCalibrationComplete();
+        void    drawHeader(const __FlashStringHelper* title, uint16_t titleBgColor);
         void    drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     //Show tempEratures
         void    drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize);  //show percentages
+        void    drawState(const __FlashStringHelper* txtState, uint16_t color);   //Show the heater state
+        void    printAt(int16_t x, int16_t y, PGM_P txt);
         void    tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     // Show the preset temperature
         void    tCurr(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);    // Show the current temperature
-        void    tInternal(uint16_t t);                                      // Show the current temperature in internal units
-        void    tReal(uint16_t t);                                          // Show the real temperature in Celsius in calibrate mode
+        void    tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize);                                      // Show the current temperature in internal units
+        void    tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize);                                          // Show the real temperature in Celsius in calibrate mode
         void    fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize);                                        // Show the fan speed
 		void	appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool show_zero = true);			    // Show applied power (%)
         void    setupMode(uint8_t mode);
-        void    msgON(void);                                                // Show message: "ON"
-        void    msgOFF(void);
-        void    msgReady(void);
-        void    msgCold(void);
         void    msgFail(void);                                              // Show 'Fail' message
         void    msgTune(void);
         void    showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pwr);                                              // Show 'Tune' message
@@ -427,88 +457,153 @@ void DSPL::invalidateCache(void) {
     last_fan = 255;
 }
 
-void DSPL::drawCalibrationLayout(bool tune, bool ready) {
+void DSPL::drawCalibrationIntro() {
 
     tft.fillScreen(ST7735_BLACK);
+    drawHeader(FS(TXT_CALIBRATION), ST7735_BLUE);
 
-    // Title bar
-    tft.fillRect(0, 0, 160, 14, ST7735_BLUE);
+    tft.setTextSize(TFT_SMALL_SIZE);
 
-    tft.setTextColor(ST7735_WHITE);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(10, 0);
-    tft.print(F("Calibration"));
+    tft.setCursor(26, 42);
+    tft.print(F("This process will"));
+    tft.setCursor(47, 54);
+    tft.print(F("calibrate 3"));
+    tft.setCursor(53, 66);
+    tft.print(F("setpoints"));
 
     tft.setTextColor(ST7735_YELLOW);
 
-    // =========================
-    // Selection state
-    // =========================
-    if (!tune) {
+    tft.setCursor(22, 88);
+    tft.print(F("200C"));
 
-        tft.setCursor(20, 18);
-        tft.print(F("SET"));
+    tft.setCursor(68, 88);
+    tft.print(F("300C"));
 
-        tft.setCursor(20, 105);
-        tft.print(F("STATE"));
-    }
+    tft.setCursor(114, 88);
+    tft.print(F("400C"));
 
-    // =========================
-    // Heating state
-    // =========================
-    else if (tune && !ready) {
+    tft.drawFastHLine(10, 104, 140, ST7735_BLUE);
+    tft.setTextColor(ST7735_GREEN);
+    tft.setCursor(14, 114);
+    tft.print(F("Press encoder to start"));
+}
 
-        tft.setCursor(20, 18);
-        tft.print(F("SET"));
+void DSPL::drawCalibrationLayoutBase() {
 
-        tft.setCursor(20, 64);
-        tft.print(F("CUR"));
+    tft.fillScreen(ST7735_BLACK);
 
-        tft.setCursor(104, 18);
-        tft.print(F("FAN"));
+    // ===== STATIC LABELS =====
+    tft.setTextColor(ST7735_YELLOW);
 
-        tft.setCursor(104, 64);
-        tft.print(F("HTR"));
+    tft.setTextSize(TFT_LABEL_SIZE);
 
-        tft.setCursor(20, 105);
-        tft.print(F("STATE"));
-    }
+    printAt(COL_LEFT, 24, TXT_SET);
+    printAt(COL_LEFT, 105, TXT_STATE);
 
-    // =========================
-    // Ready state
-    // =========================
-    else {
+    // ===== RIGHT PANEL =====
+    tft.setTextSize(TFT_SMALL_SIZE);
 
-        tft.setCursor(20, 18);
-        tft.print(F("SET"));
+    printAt(COL_RIGHT, 24, TXT_FAN);
+    printAt(COL_RIGHT, 34, TXT_SPEED);
+    printAt(COL_RIGHT, 66, TXT_HTR);
+    printAt(COL_RIGHT, 76, TXT_POWER);
+}
 
-        tft.setCursor(20, 64);
-        tft.print(F("MEAS"));
+void DSPL::drawCalibrationSaved(uint16_t point) {
 
-        tft.setCursor(20, 105);
-        tft.print(F("STATE"));
-    }
+    tft.fillScreen(ST7735_BLACK);
+
+    drawHeader(F("POINT SAVED"), ST7735_GREEN);
+
+    tft.setTextColor(ST7735_WHITE);
+
+    tft.setTextSize(TFT_LABEL_SIZE);
+
+    tft.setCursor(40, 42);
+    tft.print(point);
+
+    tft.print(F("C"));
+
+    tft.setTextColor(ST7735_GREEN);
+
+    tft.setTextSize(3);
+
+    tft.setCursor(62, 72);
+    tft.print(FS(TXT_OK));
+}
+
+void DSPL::drawCalibrationComplete() {
+
+    tft.fillScreen(ST7735_BLACK);
+
+    drawHeader(F("DONE"), ST7735_GREEN);
+
+    tft.setTextColor(ST7735_WHITE);
+
+    tft.setTextSize(TFT_LABEL_SIZE);
+
+    printAt(18, 42, TXT_CALIBRATION);
+
+    tft.setCursor(36, 62);
+    tft.print(F("SAVED"));
+
+    tft.setTextColor(ST7735_GREEN);
+
+    tft.setTextSize(3);
+
+    tft.setCursor(58, 92);
+    tft.print(FS(TXT_OK));
+}
+
+void DSPL::drawCalibrationLayout(bool ready) {
+    tft.fillScreen(ST7735_BLACK);
+    drawHeader(FS(TXT_CALIBRATION), ST7735_BLUE);
+
+    // Labels
+    tft.setTextColor(ST7735_YELLOW);
+
+    tft.setTextSize(TFT_LABEL_SIZE);
+
+    printAt(20, 30, TXT_SET);
+    
+    printAt(20, 72, ready ? (PGM_P)TXT_MEAS : (PGM_P)TXT_CUR);
+
+    printAt(20, 105, TXT_STATE);
+
+    tft.setTextSize(TFT_SMALL_SIZE);
+    printAt(104, 24, TXT_FAN);
+    printAt(104, 34, TXT_SPEED);
+    printAt(104, 66, TXT_HTR);
+    printAt(104, 76, TXT_POWER);
+}
+
+void DSPL::drawHeader(const __FlashStringHelper* title, uint16_t titleBgColor) {
+    tft.fillRect(0, 0, 160, 18, titleBgColor);
+
+    tft.setTextColor(ST7735_WHITE);
+    tft.setTextSize(TFT_LABEL_SIZE);
+
+    uint16_t w = strlen_P((PGM_P)title) * 6 * TFT_LABEL_SIZE;
+
+    int16_t x = (160 - w) / 2;
+
+    tft.setCursor(x, 2);
+
+    tft.print(title);
 }
 
 void DSPL::drawStatic(void) {
     // Draw all static elements (labels) once
     tft.setTextColor(ST7735_YELLOW);
     tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(20, 5);
-    tft.print(F("SET"));
-    tft.setCursor(20, 56);
-    tft.print(F("CUR"));
-    tft.setCursor(20, 105);
-    tft.print(F("STATE"));
-    tft.setCursor(104, 5);
-    tft.print(F("FAN"));
-    tft.setCursor(104, 56);
-    tft.print(F("HTR"));
+    printAt(20, 5, TXT_SET);
+    printAt(20, 56, TXT_CUR);
+    printAt(20, 105, TXT_STATE);
+    printAt(104, 5, TXT_FAN);
+    printAt(104, 56, TXT_HTR);
     tft.setTextSize(TFT_SMALL_SIZE);
-    tft.setCursor(104, 23);
-    tft.print(F("SPEED"));
-    tft.setCursor(104, 74);
-    tft.print(F("POWER"));
+    printAt(104, 23, TXT_SPEED);
+    printAt(104, 74, TXT_POWER);
 }
 
 static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value) {
@@ -541,6 +636,11 @@ static void print2d_on_tft(Adafruit_ST7735 &tft, uint8_t value) {
     tft.print(buf);
 }
 
+void DSPL::printAt(int16_t x, int16_t y, PGM_P txt) {
+    tft.setCursor(x, y);
+    tft.print(FS(txt));
+}
+
 void DSPL::tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize) {
     if (t == last_set) return;
     last_set = t;
@@ -563,40 +663,43 @@ void DSPL::drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize){
     tft.print(temp_units);
 }
 
-void DSPL::tInternal(uint16_t t) {
-    char buff[6];
-  
-    tft.fillRect(20, 46, 60, 16, ST7735_BLACK);
+void DSPL::tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {  
+    tft.fillRect(x, y, textSize*24, textSize * 8, ST7735_BLACK);
 
-    tft.setCursor(20, 46);
+    tft.setCursor(x, y);
 
-    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.setTextSize(textSize);
 
     tft.setTextColor(ST7735_WHITE);
 
     if (t < 1023) {
-        tft.print(t);
+
+        print3d_on_tft(tft, t);
+
         tft.print(F("C"));
+
     } else {
+
         tft.print(F("xxxx"));
-    }
-  
-    if (full_second_line) {
-        full_second_line = false;
     }
 }
 
 
-void DSPL::tReal(uint16_t t) {
-    char buff[6];
-    tft.setCursor(11 * 6, 8);
-    if (t < 1000) {
-        sprintf(buff, ">%3dC", t);
-    } else {
-        tft.print(F("xxx"));
-        return;
-    }
-    tft.print(buff);
+void DSPL::tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {
+
+    tft.fillRect(x,y,textSize * 24,textSize * 8,ST7735_BLACK);
+
+    tft.setCursor(20, 83);
+
+    tft.setTextSize(textSize);
+
+    tft.setTextColor(ST77XX_WHITE);
+
+    tft.print(F(">"));
+
+    print3d_on_tft(tft, t);
+
+    tft.print(F("C"));
 }
 
 void DSPL::fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize) {
@@ -632,6 +735,18 @@ void DSPL::appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool 
     drawPercent(p, x, y, textSize);
 }
 
+void DSPL::drawCalibrationModeLabel(bool ready) {
+    tft.fillRect(18, 66, 44, 14, ST7735_BLACK);
+
+    tft.setTextColor(ST7735_YELLOW);
+
+    tft.setTextSize(TFT_LABEL_SIZE);
+
+    tft.setCursor(20, 66);
+
+    printAt(20, 66, ready ? (PGM_P)TXT_MEAS : (PGM_P)TXT_CUR);
+}
+
 void DSPL::drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize){
     // Redraw only the percentage temperature area
     tft.fillRect(x, y, textSize*24, textSize*8, ST7735_BLACK);
@@ -640,6 +755,14 @@ void DSPL::drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSi
     tft.setCursor(x, y);
     print3d_on_tft(tft, percentage);
     tft.print(F("%"));
+}
+
+void DSPL::drawState(const __FlashStringHelper* txtState, uint16_t color) {
+    tft.fillRect(90, 105, TFT_LABEL_SIZE*30, TFT_LABEL_SIZE*8, ST7735_BLACK);
+    tft.setTextColor(color);
+    tft.setTextSize(TFT_LABEL_SIZE);
+    tft.setCursor(90, 105);
+    tft.print(txtState);
 }
 
 void DSPL::setupMode(byte mode) {
@@ -700,36 +823,6 @@ void DSPL::setupMode(byte mode) {
     lastMode = mode;
 }
 
-void DSPL::msgON(void) {
-    tft.fillRect(104, 105, 36, 16, ST7735_BLACK);
-    tft.setCursor(104, 105);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setTextColor(ST7735_GREEN);
-    tft.print(F("ON"));
-}
-
-void DSPL::msgOFF(void) {
-    tft.fillRect(104, 105, 36, 16, ST7735_BLACK);
-    tft.setCursor(104, 105);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setTextColor(ST7735_RED);
-    tft.print(F("OFF"));
-}
-
-void DSPL::msgReady(void) {
-    tft.fillRect(20, 105, 30, 8, ST7735_BLACK);
-    tft.setCursor(20, 105);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.print(F("Ready"));
-}
-
-void DSPL::msgCold(void) {
-    tft.fillRect(20, 105, 30, 8, ST7735_BLACK);
-    tft.setCursor(20, 105);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.print(F("Cold"));
-}
-
 void DSPL::msgFail(void) {
     tft.fillScreen(ST7735_BLACK);
     tft.setCursor(20, 8);
@@ -740,16 +833,7 @@ void DSPL::msgFail(void) {
 void DSPL::msgTune(void) {
 
     tft.fillScreen(ST7735_BLACK);
-
-    // Header
-
-    tft.fillRect(0, 0, 160, 18, ST7735_BLUE);
-
-    tft.setTextColor(ST7735_WHITE);
-    tft.setTextSize(2);
-
-    tft.setCursor(8, 2);
-    tft.print(F("Heater Test"));
+    drawHeader(F("Heater Test"), ST7735_BLUE);
 
     // Labels
 
@@ -757,38 +841,26 @@ void DSPL::msgTune(void) {
 
     tft.setTextColor(ST7735_YELLOW);
 
-    tft.setCursor(20, 25);
-    tft.print(F("CUR"));
-
-    tft.setCursor(20, 105);
-    tft.print(F("STATE"));
+    printAt(20, 25, TXT_CUR);
+    
+    printAt(20, 105, TXT_STATE);
 
     tft.setTextSize(TFT_SMALL_SIZE);
-    tft.setCursor(104, 23);
-    tft.print(F("FAN"));
-    tft.setCursor(104, 33);
-    tft.print(F("SPEED"));
-    tft.setCursor(104, 64);
-    tft.print(F("HTR"));
-    tft.setCursor(104, 74);
-    tft.print(F("POWER"));
+    printAt(104, 23, TXT_FAN);
+    printAt(104, 33, TXT_SPEED);
+    printAt(104, 64, TXT_HTR);
+    printAt(104, 74, TXT_POWER);
 }
 
 void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pwr) {
-  tft.fillScreen(ST7735_BLACK);
-  
-  // Cabecera de alerta
-    tft.fillRect(0, 0, tft.width(), 20, ST7735_RED);
-    tft.setTextColor(ST7735_WHITE);
-    tft.setTextSize(2);
-    tft.setCursor(51, 3);
-    tft.print("ALERT");
+    tft.fillScreen(ST7735_BLACK);
+    drawHeader(F("ALERT"), ST7735_RED);
   
   // Icono central
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
   tft.setTextSize(3);
   tft.setCursor(65, 50);
-  tft.print("!");
+  tft.print(F("!"));
   
   // Descripción del error
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
@@ -796,25 +868,25 @@ void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pw
   tft.setCursor(5, 30);
   
   switch(errCode) {
-    case 1: tft.print("AC synchronization failure"); break;
-    case 2: tft.print("Temperature reading failure"); break;
-    case 3: tft.print("Overheating detected"); break;
-    default: tft.print("Uncatalogued error"); break;
+    case 1: tft.print(F("AC synchronization failure")); break;
+    case 2: tft.print(F("Temperature reading failure")); break;
+    case 3: tft.print(F("Overheating detected")); break;
+    default: tft.print(F("Uncatalogued error")); break;
   }
   
   // Datos de contexto para diagnóstico
   tft.setTextColor(ST7735_CYAN, ST7735_BLACK);
   tft.setCursor(5, 45);
-  tft.print("Temp: "); tft.print(lastTemp);
+  tft.print(F("Temp: ")); tft.print(lastTemp);
   tft.setCursor(5, 58);
-  tft.print("Fan: "); tft.print(fan);
+  tft.print(F("Fan: ")); tft.print(fan);
   tft.setCursor(5, 71);
-  tft.print("Htr power: "); tft.print(pwr);
+  tft.print(F("Htr power: ")); tft.print(pwr);
   
   // Instrucción de acción
   tft.setTextColor(ST7735_YELLOW, ST7735_BLACK);
   tft.setCursor(5, 84);
-  tft.print("Press encoder to return");
+  tft.print(F("Press encoder to return"));
 
   // Línea separadora inferior
   tft.drawLine(0, 97, tft.width(), 97, ST7735_GREEN);
@@ -1242,9 +1314,9 @@ SCREEN* mainSCREEN::show(void) {
 	uint16_t tempH = pCfg->tempHuman(temp);
 	if (pCfg->isCold(temp)) {
 		if (used) {
-			pD->msgCold();
+			pD->drawState(FS(TXT_COLD), ST7735_BLUE);
 		} else {
-			pD->msgOFF();
+			pD->drawState(FS(TXT_OFF), ST7735_RED);
 		}
 		if (used && !cool_notified) {
 		    pBz->lowBeep();
@@ -1252,7 +1324,7 @@ SCREEN* mainSCREEN::show(void) {
 		    clear_used_ms = millis() + cool_notify_period;
 		}
 	} else {
-        pD->msgOFF();
+        pD->drawState(FS(TXT_OFF), ST7735_RED);
 	}
 	pD->tCurr(tempH, 20, 76, TFT_VALUE_SIZE);
     pD->appliedPower(0, 92, 86, TFT_LABEL_SIZE, false);
@@ -1348,22 +1420,22 @@ SCREEN* workSCREEN::show(void) {
     int temp      = pHG->tempAverage();
     int tempH     = pCfg->tempHuman(temp);
     pD->tCurr(tempH, 20, 76, TFT_VALUE_SIZE);
-    pD->msgON();
+    pD->drawState(FS(TXT_ON), ST7735_GREEN);
 	uint8_t p 	= pHG->appliedPower();
 	pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
     pD->fanSpeed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
 
     
-Serial.print("Diff = "); Serial.print(temp_set - temp);
+Serial.print(F("Diff = ")); Serial.print(temp_set - temp);
 uint32_t disp = pHG->tempDispersion();
-Serial.print(", Dispersion = "); Serial.println(disp);
+Serial.print(F(", Dispersion = ")); Serial.println(disp);
 
     if ((abs(temp_set - temp) < 5) && (pHG->tempDispersion() <= 20))  {
         if (!ready) {
             pBz->shortBeep();
             ready = true;
-            pD->msgReady();
-            Serial.println("Ready");
+            pD->drawState(FS(TXT_HOLD), ST7735_CYAN);
+            Serial.println(FS(TXT_READY));
             update_screen = millis() + (period << 2);
             return this;
         }
@@ -1556,21 +1628,25 @@ class calibSCREEN : public SCREEN {
         HOTGUN_CFG*     pCfg;                                               // Pointer to the config instance
         BUZZER*         pBz;                                                // Pointer to the buzzer instance
         uint8_t         mode;                                               // Which parameter to change: t_min, t_mid, t_max
+        uint8_t last_mode;
         uint16_t        calib_temp[2][3];                                   // Calibration temperature data measured at each of calibration points (Celsius, internal temp)
         uint16_t        preset_temp;                                        // The preset temp in human readable units
         bool            ready;                                              // Whether the temperature has been established
         bool            tune;                                               // Whether the parameter is modifiying
         bool last_tune;
         bool last_ready;
+        bool started;
         const uint32_t  period   = 1000;                                    // Update screen period
         const uint16_t  temp_max = 900;
 };
 
 void calibSCREEN::init(void) {
 
+    started=false;
+
     mode = 0;
 
-    pEnc->reset(mode, 0, 2, 1, 0, true);
+    last_mode = 255;
 
     pHG->switchPower(false);
 
@@ -1588,11 +1664,9 @@ void calibSCREEN::init(void) {
     pD->clear();
 
     // Draw initial layout
-    pD->drawCalibrationLayout(tune, ready);
+    pD->drawCalibrationIntro();
 
     pD->invalidateCache();
-
-    pD->msgOFF();
 
     uint16_t temp = temp_tip[mode];
 
@@ -1608,14 +1682,24 @@ void calibSCREEN::init(void) {
 }
 
 SCREEN* calibSCREEN::show(void) {
+    if (!started) {
+        return this;
+    }
 
-    // Detect UI state changes first
-    if ((tune != last_tune) || (ready != last_ready)) {
+    if ((tune != last_tune) || (ready != last_ready) || (mode != last_mode)) {
 
         last_tune  = tune;
         last_ready = ready;
+        last_mode  = mode;
 
-        pD->drawCalibrationLayout(tune, ready);
+        pD->drawCalibrationLayoutBase();
+
+        if (ready)
+            pD->drawHeader(FS(TXT_READY), ST7735_GREEN);
+        else
+            pD->drawHeader(FS(TXT_ADJUST), ST7735_BLUE);
+
+        pD->drawCalibrationModeLabel(ready);
 
         pD->invalidateCache();
     }
@@ -1634,14 +1718,14 @@ SCREEN* calibSCREEN::show(void) {
     uint16_t temp_setH = pCfg->tempHuman(temp_set);
 
     // Always show SET temperature
-    pD->tSet(temp_setH, 20, 35, TFT_VALUE_SIZE);
+    pD->tSet(temp_setH, 20, 45, TFT_LABEL_SIZE);
 
     // =========================
     // Selection state
     // =========================
     if (!tune) {
 
-        pD->msgOFF();
+        pD->drawState(FS(TXT_OFF), ST7735_RED);
     }
 
     // =========================
@@ -1649,19 +1733,49 @@ SCREEN* calibSCREEN::show(void) {
     // =========================
     if (tune && !ready) {
 
-        pD->msgON();
+        pD->drawState(FS(TXT_ON), ST7735_GREEN);
 
-        pD->tCurr(
-            tempH,
-            20,
-            81,
-            TFT_VALUE_SIZE
-        );
+        pD->tCurr(tempH, 20, 86, TFT_LABEL_SIZE);
 
         uint8_t p = pHG->appliedPower();
 
         if (!pHG->isOn())
             p = 0;
+        pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
+        pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
+
+        #ifdef SIMULATION_MODE
+
+        if(p>=0){
+            pBz->shortBeep();
+            ready=true;
+        }
+
+        #else
+        // Detect stabilized temperature
+        if ((abs(temp_set - temp) < 5) &&
+            (pHG->tempDispersion() <= 20) &&
+            (p > 1)) {
+
+            pBz->shortBeep();
+
+            ready = true;
+        }
+        #endif
+    }
+
+    // =========================
+    // Ready state
+    // =========================
+    if (ready) {
+
+        pD->drawState(FS(TXT_HOLD), ST7735_CYAN);
+
+        pD->tReal(
+            pEnc->read(), 20, 83, TFT_LABEL_SIZE
+        );
+
+        uint8_t p = pHG->appliedPower();
 
         pD->appliedPower(
             p,
@@ -1676,28 +1790,6 @@ SCREEN* calibSCREEN::show(void) {
             45,
             TFT_LABEL_SIZE
         );
-
-        // Detect stabilized temperature
-        if ((abs(temp_set - temp) < 5) &&
-            (pHG->tempDispersion() <= 20) &&
-            (p > 1)) {
-
-            pBz->shortBeep();
-
-            ready = true;
-        }
-    }
-
-    // =========================
-    // Ready state
-    // =========================
-    if (ready) {
-
-        pD->msgReady();
-
-        pD->tReal(
-            pEnc->read()
-        );
     }
 
     // Hotgun switched OFF unexpectedly
@@ -1706,12 +1798,9 @@ SCREEN* calibSCREEN::show(void) {
         tune  = false;
         ready = false;
 
-        pD->msgOFF();
+        pD->drawState(FS(TXT_OFF), ST7735_RED);
 
-        pD->drawCalibrationLayout(
-            tune,
-            ready
-        );
+        pD->drawCalibrationLayout(ready);
 
         pD->invalidateCache();
     }
@@ -1732,26 +1821,91 @@ void calibSCREEN::rotaryValue(int16_t value) {
 }
 
 SCREEN* calibSCREEN::menu(void) { 
-    if (tune) {                                                             // Calibrated value for the temperature limit jus has been setup
-        tune = false;
-        calib_temp[0][mode] = pEnc->read();                                 // Real temperature (Celsius)
-        calib_temp[1][mode] = pHG->tempAverage();                           // The temperature on the hot gun
-        pHG->switchPower(false);
-        pEnc->reset(mode, 0, 2, 1, 0, true);                                // The temperature limit has been adjusted, switch to select mode
-        uint16_t tip[3];
-        buildCalibration(tip);
-        pCfg->applyCalibrationData(tip);
-    } else {                                                                // Calibration point selected
-        tune = true;
+
+    // =========================
+    // Start wizard
+    // =========================
+    if (!started) {
+
+        started = true;
+
+        tune  = true;
+        ready = false;
+
         uint16_t temp = temp_tip[mode];
+
         pEnc->reset(temp, 40, 600, 1, 5);
+
         temp = pCfg->tempInternal(temp);
+
         pHG->setTemp(temp);
+
         pHG->switchPower(true);
+
+        update_screen = 0;
+
+        forceRedraw();
+
+        return this;
     }
-    ready = false;
-    update_screen = 0;
-    forceRedraw();
+
+    // =========================
+    // SAVE CURRENT POINT
+    // =========================
+    if (ready) {
+
+        tune = false;
+
+        calib_temp[0][mode] = pEnc->read();
+
+        calib_temp[1][mode] = pHG->tempAverage();
+
+        pHG->switchPower(false);
+
+        // ===== SAVED SCREEN =====
+        pD->drawCalibrationSaved(
+            temp_tip[mode]
+        );
+
+        delay(1200);
+
+        uint16_t tip[3];
+
+        buildCalibration(tip);
+
+        pCfg->applyCalibrationData(tip);
+
+        // ===== NEXT POINT =====
+        mode++;
+
+        // Finished all points
+        if (mode > 2) {
+            pD->drawCalibrationComplete();
+            delay(1500);
+            return menu_long();
+        }
+
+        // Start next heating cycle
+        ready = false;
+        tune  = true;
+
+        uint16_t temp = temp_tip[mode];
+
+        pEnc->reset(temp, 40, 600, 1, 5);
+
+        temp = pCfg->tempInternal(temp);
+
+        pHG->setTemp(temp);
+
+        pHG->switchPower(true);
+
+        update_screen = 0;
+
+        forceRedraw();
+
+        return this;
+    }
+
     return this;
 }
 
@@ -1835,7 +1989,7 @@ void tuneSCREEN::init(void) {
     heat_ms = 0;
     pD->clear();
     pD->msgTune();
-    pD->msgOFF();
+    pD->drawState(FS(TXT_OFF), ST7735_RED);
     pD->fanSpeed(255, 92, 45, TFT_LABEL_SIZE);
     forceRedraw();
 }
@@ -1857,7 +2011,7 @@ SCREEN* tuneSCREEN::show(void) {
     if (!on) {
         power = pEnc->read();
     }
-    pD->tInternal(temp);
+    pD->tInternal(temp, 20, 46, TFT_LABEL_SIZE);
     pD->appliedPower(power, 92, 86, TFT_LABEL_SIZE);
     pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
     if (heat_ms && ((millis() - heat_ms) > 3000) && (pHG->tempDispersion() < 10) && (power > 1)) {
@@ -1871,13 +2025,13 @@ SCREEN* tuneSCREEN::menu(void) {                                            // T
     if (on) {
         pHG->fixPower(0);
         on = false;
-        pD->msgOFF();
+        pD->drawState(FS(TXT_OFF), ST7735_RED);
     } else {
         on = true;
         heat_ms = millis();
         uint8_t power = pEnc->read();                                       // applied power
         pHG->fixPower(power);
-        pD->msgON();
+        pD->drawState(FS(TXT_ON), ST7735_GREEN);
     }
     return this;
 }
@@ -1933,7 +2087,7 @@ void pidSCREEN::rotaryValue(int16_t value) {
 				Serial.println(F("Temp"));
 				break;
 			case 5:
-				Serial.println(F("Fan"));
+				Serial.println(FS(TXT_FAN));
                 break;
 			case 3:
 			default:
@@ -1973,13 +2127,18 @@ SCREEN* pidSCREEN::show(void) {
 	if (millis() < update_screen) return this;
 	update_screen = millis() + period;
 	if (pHG->isOn()) {
-		char buff[80];
 		int		 temp   = pHG->getCurrTemp();
 		uint8_t	 pwr 	= pHG->powerAverage();
 		uint8_t  fs		= pHG->getFanSpeed();
 		fs = map(fs, 0, 255, 0, 100);
-		sprintf(buff, "%3d: power = %3d%c, fan = %3d;", temp_set - temp, pwr, '%', fs);
-		Serial.println(buff);
+        Serial.print(temp_set - temp);
+
+        Serial.print(F(": power = "));
+        Serial.print(pwr);
+        Serial.print('%');
+        Serial.print(F(", fan = "));
+        Serial.print(fs);
+        Serial.println(';');
 	}
 	return this;
 }
@@ -2020,9 +2179,9 @@ void pidSCREEN::showCfgInfo(void) {
 	for (byte i = 1; i < 4; ++i) {
 		int k = pHG->changePID(i, -1);
 		Serial.print(k, DEC);
-		if (i < 3) Serial.print(", ");
+		if (i < 3) Serial.print(F(", "));
 	}
-	Serial.print("]; ");
+	Serial.print(F("]; "));
 }
 
 //=========================================================================================================
@@ -2142,6 +2301,7 @@ void loop() {
     if (sNxt != pCurrentScreen) nxt = sNxt;
     uint32_t current_time = millis();
     if (current_time - last_update >= 1000) last_update = current_time;
+    
     /*Se comenta este bloque para pruebas de los menús en el simulador*/
     if (current_time > ac_check) {
       ac_check = current_time + 1000;
