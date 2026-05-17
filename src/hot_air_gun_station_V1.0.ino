@@ -12,11 +12,11 @@
 #include <SPI.h>
 
 //Correcciones definidas para el perfil de simulador simulador de wokwi, sugiero retirarlas antes de probar en hardware físico
-#define ST7735_RED     0x07E0
-#define ST7735_GREEN   0x001F
-#define ST7735_BLUE    0xF800
-#define ST7735_YELLOW  0x07FF
-#define ST7735_CYAN   0xF81F
+// #define ST7735_RED     0x07E0
+// #define ST7735_GREEN   0x001F
+// #define ST7735_BLUE    0xF800
+// #define ST7735_YELLOW  0x07FF
+// #define ST7735_CYAN   0xF81F
 
 class configSCREEN;
 
@@ -63,9 +63,9 @@ static const char TXT_OK[] PROGMEM = "OK";
 #define TFT_DC_PIN  10     // DC on D10 matches Wokwi test code
 #define TFT_RST_PIN A1     // Use free analog pin A1 for TFT reset
 
-#define TFT_LABEL_SIZE 2
-#define TFT_VALUE_SIZE 3
-#define TFT_SMALL_SIZE 1
+#define TFT_LABEL_SIZE (uint8_t)2
+#define TFT_VALUE_SIZE (uint8_t)3
+#define TFT_SMALL_SIZE (uint8_t)1
 
 #define TFT_CHAR_W(s) (6 * (s))
 #define TFT_CHAR_H(s) (8 * (s))
@@ -410,7 +410,15 @@ class DSPL {
         void    drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     //Show tempEratures
         void    drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize);  //show percentages
         void    drawState(const __FlashStringHelper* txtState, uint16_t color);   //Show the heater state
-        void    printAt(int16_t x, int16_t y, PGM_P txt);
+        void    printAt(int16_t x, int16_t y, const __FlashStringHelper* txt);
+        void    printWColorAt(int16_t x, int16_t y, const __FlashStringHelper*txt, uint16_t color);
+        void    printWSizeAt(int16_t x, int16_t y, const __FlashStringHelper* txt, uint8_t size);
+        void    printWColorSizeAt(int16_t x, int16_t y, const __FlashStringHelper* txt, uint16_t color, uint8_t size);
+        void    printAt(int16_t x, int16_t y, const char* txt); 
+        void    printWColorAt(int16_t x, int16_t y, const char* txt, uint16_t color);
+        void    printWSizeAt(int16_t x, int16_t y, const char*  txt, uint8_t size);
+        void    printWColorSizeAt(int16_t x, int16_t y, const char*  txt, uint16_t color, uint8_t size);
+        void    printValAt(int16_t x, int16_t y, const __FlashStringHelper* label, int16_t value);
         void    tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);     // Show the preset temperature
         void    tCurr(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);    // Show the current temperature
         void    tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize);                                      // Show the current temperature in internal units
@@ -462,30 +470,16 @@ void DSPL::drawCalibrationIntro() {
     tft.fillScreen(ST7735_BLACK);
     drawHeader(FS(TXT_CALIBRATION), ST7735_BLUE);
 
-    tft.setTextSize(TFT_SMALL_SIZE);
+    printWSizeAt(26, 42, F("This process will"), TFT_SMALL_SIZE);
+    printAt(47, 54, F("calibrate 3"));
+    printAt(53, 66, F("setpoints"));
 
-    tft.setCursor(26, 42);
-    tft.print(F("This process will"));
-    tft.setCursor(47, 54);
-    tft.print(F("calibrate 3"));
-    tft.setCursor(53, 66);
-    tft.print(F("setpoints"));
-
-    tft.setTextColor(ST7735_YELLOW);
-
-    tft.setCursor(22, 88);
-    tft.print(F("200C"));
-
-    tft.setCursor(68, 88);
-    tft.print(F("300C"));
-
-    tft.setCursor(114, 88);
-    tft.print(F("400C"));
+    printWColorAt(22, 88, F("200C"), ST7735_YELLOW);
+    printAt(68, 88, F("300C"));
+    printAt(114, 88, F("400C"));
 
     tft.drawFastHLine(10, 104, 140, ST7735_BLUE);
-    tft.setTextColor(ST7735_GREEN);
-    tft.setCursor(14, 114);
-    tft.print(F("Press encoder to start"));
+    printWColorAt(14, 114, F("Press encoder to start"), ST7735_GREEN);
 }
 
 void DSPL::drawCalibrationLayoutBase() {
@@ -493,17 +487,11 @@ void DSPL::drawCalibrationLayoutBase() {
     tft.fillScreen(ST7735_BLACK);
 
     // ===== STATIC LABELS =====
-    tft.setTextColor(ST7735_YELLOW);
-
-    tft.setTextSize(TFT_LABEL_SIZE);
-
-    printAt(COL_LEFT, 24, TXT_SET);
+    printWColorSizeAt(COL_LEFT, 24, TXT_SET, ST7735_YELLOW, TFT_LABEL_SIZE);
     printAt(COL_LEFT, 105, TXT_STATE);
 
     // ===== RIGHT PANEL =====
-    tft.setTextSize(TFT_SMALL_SIZE);
-
-    printAt(COL_RIGHT, 24, TXT_FAN);
+    printWSizeAt(COL_RIGHT, 24, TXT_FAN, TFT_SMALL_SIZE);
     printAt(COL_RIGHT, 34, TXT_SPEED);
     printAt(COL_RIGHT, 66, TXT_HTR);
     printAt(COL_RIGHT, 76, TXT_POWER);
@@ -524,12 +512,7 @@ void DSPL::drawCalibrationSaved(uint16_t point) {
 
     tft.print(F("C"));
 
-    tft.setTextColor(ST7735_GREEN);
-
-    tft.setTextSize(3);
-
-    tft.setCursor(62, 72);
-    tft.print(FS(TXT_OK));
+    printWColorSizeAt(62, 72, TXT_OK, ST7735_GREEN, TFT_VALUE_SIZE);
 }
 
 void DSPL::drawCalibrationComplete() {
@@ -538,21 +521,11 @@ void DSPL::drawCalibrationComplete() {
 
     drawHeader(F("DONE"), ST7735_GREEN);
 
-    tft.setTextColor(ST7735_WHITE);
+    printWColorSizeAt(18, 42, TXT_CALIBRATION, ST7735_WHITE, TFT_LABEL_SIZE);
 
-    tft.setTextSize(TFT_LABEL_SIZE);
+    printAt(36, 62, F("SAVED"));
 
-    printAt(18, 42, TXT_CALIBRATION);
-
-    tft.setCursor(36, 62);
-    tft.print(F("SAVED"));
-
-    tft.setTextColor(ST7735_GREEN);
-
-    tft.setTextSize(3);
-
-    tft.setCursor(58, 92);
-    tft.print(FS(TXT_OK));
+    printWColorSizeAt(58, 92, TXT_OK, ST7735_GREEN, TFT_VALUE_SIZE);
 }
 
 void DSPL::drawCalibrationLayout(bool ready) {
@@ -560,50 +533,34 @@ void DSPL::drawCalibrationLayout(bool ready) {
     drawHeader(FS(TXT_CALIBRATION), ST7735_BLUE);
 
     // Labels
-    tft.setTextColor(ST7735_YELLOW);
-
-    tft.setTextSize(TFT_LABEL_SIZE);
-
-    printAt(20, 30, TXT_SET);
+    printWColorSizeAt(COL_LEFT, 30, TXT_SET, ST7735_YELLOW, TFT_LABEL_SIZE);
     
-    printAt(20, 72, ready ? (PGM_P)TXT_MEAS : (PGM_P)TXT_CUR);
+    printAt(COL_LEFT, 72, ready ? (PGM_P)TXT_MEAS : (PGM_P)TXT_CUR);
 
-    printAt(20, 105, TXT_STATE);
+    printAt(COL_LEFT, 105, TXT_STATE);
 
-    tft.setTextSize(TFT_SMALL_SIZE);
-    printAt(104, 24, TXT_FAN);
-    printAt(104, 34, TXT_SPEED);
-    printAt(104, 66, TXT_HTR);
-    printAt(104, 76, TXT_POWER);
+    printWSizeAt(COL_RIGHT, 24, TXT_FAN, TFT_SMALL_SIZE);
+    printAt(COL_RIGHT, 34, TXT_SPEED);
+    printAt(COL_RIGHT, 66, TXT_HTR);
+    printAt(COL_RIGHT, 76, TXT_POWER);
 }
 
 void DSPL::drawHeader(const __FlashStringHelper* title, uint16_t titleBgColor) {
     tft.fillRect(0, 0, 160, 18, titleBgColor);
-
-    tft.setTextColor(ST7735_WHITE);
-    tft.setTextSize(TFT_LABEL_SIZE);
-
     uint16_t w = strlen_P((PGM_P)title) * 6 * TFT_LABEL_SIZE;
-
     int16_t x = (160 - w) / 2;
-
-    tft.setCursor(x, 2);
-
-    tft.print(title);
+    printWColorSizeAt(x, 2, title, ST7735_WHITE, TFT_LABEL_SIZE);
 }
 
 void DSPL::drawStatic(void) {
     // Draw all static elements (labels) once
-    tft.setTextColor(ST7735_YELLOW);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    printAt(20, 5, TXT_SET);
-    printAt(20, 56, TXT_CUR);
-    printAt(20, 105, TXT_STATE);
-    printAt(104, 5, TXT_FAN);
-    printAt(104, 56, TXT_HTR);
-    tft.setTextSize(TFT_SMALL_SIZE);
-    printAt(104, 23, TXT_SPEED);
-    printAt(104, 74, TXT_POWER);
+    printWColorSizeAt(COL_LEFT, 5, TXT_SET, ST7735_YELLOW, TFT_LABEL_SIZE);
+    printAt(COL_LEFT, 56, TXT_CUR);
+    printAt(COL_LEFT, 105, TXT_STATE);
+    printAt(COL_RIGHT, 5, TXT_FAN);
+    printAt(COL_RIGHT, 56, TXT_HTR);
+    printWSizeAt(COL_RIGHT, 23, TXT_SPEED, TFT_SMALL_SIZE);
+    printAt(COL_RIGHT, 74, TXT_POWER);
 }
 
 static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value) {
@@ -636,9 +593,52 @@ static void print2d_on_tft(Adafruit_ST7735 &tft, uint8_t value) {
     tft.print(buf);
 }
 
-void DSPL::printAt(int16_t x, int16_t y, PGM_P txt) {
+void DSPL::printAt(int16_t x, int16_t y, const char* txt) { 
+    tft.setCursor(x, y); 
+    tft.print(FS(txt)); 
+}
+
+void DSPL::printWColorAt(int16_t x, int16_t y, const char* txt, uint16_t color){
+    tft.setTextColor(color);
+    printAt(x, y, txt);
+}
+
+void DSPL::printWSizeAt(int16_t x, int16_t y, const char* txt, uint8_t size){
+    tft.setTextSize(size);
+    printAt(x, y, txt);
+}
+
+void DSPL::printWColorSizeAt(int16_t x, int16_t y, const char* txt, uint16_t color, uint8_t size){
+    tft.setTextColor(color);
+    tft.setTextSize(size);
+    printAt(x, y, txt);
+}
+
+void DSPL::printAt(int16_t x, int16_t y, const __FlashStringHelper* txt) { 
+    tft.setCursor(x, y); 
+    tft.print(txt);
+}
+
+void DSPL::printWColorAt(int16_t x, int16_t y, const __FlashStringHelper* txt, uint16_t color){
+    tft.setTextColor(color);
+    printAt(x, y, txt);
+}
+
+void DSPL::printWSizeAt(int16_t x, int16_t y, const __FlashStringHelper* txt, uint8_t size){
+    tft.setTextSize(size);
+    printAt(x, y, txt);
+}
+
+void DSPL::printWColorSizeAt(int16_t x, int16_t y, const __FlashStringHelper* txt, uint16_t color, uint8_t size){
+    tft.setTextColor(color);
+    tft.setTextSize(size);
+    printAt(x, y, txt);
+}
+
+void DSPL::printValAt(int16_t x, int16_t y, const __FlashStringHelper* label, int16_t value) {
     tft.setCursor(x, y);
-    tft.print(FS(txt));
+    tft.print(label); // Imprime "Temp: " y el cursor se mueve solo a la derecha
+    tft.print(value); // Imprime el número (ej: 200) inmediatamente después
 }
 
 void DSPL::tSet(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize) {
@@ -665,9 +665,7 @@ void DSPL::drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize){
 
 void DSPL::tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {  
     tft.fillRect(x, y, textSize*24, textSize * 8, ST7735_BLACK);
-
     tft.setCursor(x, y);
-
     tft.setTextSize(textSize);
 
     tft.setTextColor(ST7735_WHITE);
@@ -688,12 +686,7 @@ void DSPL::tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {
 void DSPL::tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {
 
     tft.fillRect(x,y,textSize * 24,textSize * 8,ST7735_BLACK);
-
-    tft.setCursor(20, 83);
-
-    tft.setTextSize(textSize);
-
-    tft.setTextColor(ST77XX_WHITE);
+    printWColorSizeAt(20, 83, F(">"), ST77XX_WHITE, textSize);
 
     tft.print(F(">"));
 
@@ -737,14 +730,7 @@ void DSPL::appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool 
 
 void DSPL::drawCalibrationModeLabel(bool ready) {
     tft.fillRect(18, 66, 44, 14, ST7735_BLACK);
-
-    tft.setTextColor(ST7735_YELLOW);
-
-    tft.setTextSize(TFT_LABEL_SIZE);
-
-    tft.setCursor(20, 66);
-
-    printAt(20, 66, ready ? (PGM_P)TXT_MEAS : (PGM_P)TXT_CUR);
+    printWColorSizeAt(COL_LEFT, 66, ready ? (PGM_P)TXT_MEAS : (PGM_P)TXT_CUR, ST7735_YELLOW, TFT_LABEL_SIZE);
 }
 
 void DSPL::drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize){
@@ -759,10 +745,7 @@ void DSPL::drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSi
 
 void DSPL::drawState(const __FlashStringHelper* txtState, uint16_t color) {
     tft.fillRect(90, 105, TFT_LABEL_SIZE*30, TFT_LABEL_SIZE*8, ST7735_BLACK);
-    tft.setTextColor(color);
-    tft.setTextSize(TFT_LABEL_SIZE);
-    tft.setCursor(90, 105);
-    tft.print(txtState);
+    printWColorSizeAt(90, 105, txtState, color, TFT_LABEL_SIZE);
 }
 
 void DSPL::setupMode(byte mode) {
@@ -777,29 +760,17 @@ void DSPL::setupMode(byte mode) {
     if (firstDraw) {
 
         tft.fillScreen(ST7735_BLACK);
+        printWColorSizeAt(50, 5, F("SETUP"), ST7735_GREEN, TFT_LABEL_SIZE);
 
-        tft.setTextSize(TFT_LABEL_SIZE);
-        tft.setTextColor(ST7735_GREEN);
+        printWColorAt(15, yPos[0], F("Calibrate"), ST7735_WHITE);
 
-        tft.setCursor(50, 5);
-        tft.print(F("SETUP"));
+        printAt(15, yPos[1], F("Heater Test"));
 
-        tft.setTextColor(ST7735_WHITE);
+        printAt(15, yPos[2], F("Save"));
 
-        tft.setCursor(15, yPos[0]);
-        tft.print(F("Calibrate"));
+        printAt(15, yPos[3], F("Cancel"));
 
-        tft.setCursor(15, yPos[1]);
-        tft.print(F("Heater Test"));
-
-        tft.setCursor(15, yPos[2]);
-        tft.print(F("Save"));
-
-        tft.setCursor(15, yPos[3]);
-        tft.print(F("Cancel"));
-
-        tft.setCursor(15, yPos[4]);
-        tft.print(F("Reset config"));
+        printAt(15, yPos[4], F("Reset config"));
 
         firstDraw = false;
 
@@ -825,9 +796,7 @@ void DSPL::setupMode(byte mode) {
 
 void DSPL::msgFail(void) {
     tft.fillScreen(ST7735_BLACK);
-    tft.setCursor(20, 8);
-    tft.setTextSize(TFT_SMALL_SIZE);
-    tft.print(F("-== Failed ==-"));
+    printWSizeAt(COL_LEFT, 8, F("-== Failed ==-"), TFT_SMALL_SIZE);
 }
 
 void DSPL::msgTune(void) {
@@ -837,19 +806,14 @@ void DSPL::msgTune(void) {
 
     // Labels
 
-    tft.setTextSize(TFT_LABEL_SIZE);
-
-    tft.setTextColor(ST7735_YELLOW);
-
-    printAt(20, 25, TXT_CUR);
+    printWColorSizeAt(COL_LEFT, 25, TXT_CUR, ST7735_YELLOW, TFT_LABEL_SIZE);
     
-    printAt(20, 105, TXT_STATE);
+    printAt(COL_LEFT, 105, TXT_STATE);
 
-    tft.setTextSize(TFT_SMALL_SIZE);
-    printAt(104, 23, TXT_FAN);
-    printAt(104, 33, TXT_SPEED);
-    printAt(104, 64, TXT_HTR);
-    printAt(104, 74, TXT_POWER);
+    printWSizeAt(COL_RIGHT, 23, TXT_FAN, TFT_SMALL_SIZE);
+    printAt(COL_RIGHT, 33, TXT_SPEED);
+    printAt(COL_RIGHT, 64, TXT_HTR);
+    printAt(COL_RIGHT, 74, TXT_POWER);
 }
 
 void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pwr) {
@@ -858,9 +822,7 @@ void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pw
   
   // Icono central
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
-  tft.setTextSize(3);
-  tft.setCursor(65, 50);
-  tft.print(F("!"));
+  printWSizeAt(65, 50, F("!"), 3);
   
   // Descripción del error
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
@@ -876,17 +838,13 @@ void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pw
   
   // Datos de contexto para diagnóstico
   tft.setTextColor(ST7735_CYAN, ST7735_BLACK);
-  tft.setCursor(5, 45);
-  tft.print(F("Temp: ")); tft.print(lastTemp);
-  tft.setCursor(5, 58);
-  tft.print(F("Fan: ")); tft.print(fan);
-  tft.setCursor(5, 71);
-  tft.print(F("Htr power: ")); tft.print(pwr);
+  printValAt(5, 45, F("Temp: "), lastTemp);
+  printValAt(5, 58, F("Fan: "), fan);
+  printValAt(5, 71, F("Htr power: "), pwr);
   
   // Instrucción de acción
   tft.setTextColor(ST7735_YELLOW, ST7735_BLACK);
-  tft.setCursor(5, 84);
-  tft.print(F("Press encoder to return"));
+  printAt(5, 84, F("Press encoder to return"));
 
   // Línea separadora inferior
   tft.drawLine(0, 97, tft.width(), 97, ST7735_GREEN);
