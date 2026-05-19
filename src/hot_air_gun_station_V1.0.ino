@@ -12,11 +12,11 @@
 #include <SPI.h>
 
 //Correcciones definidas para el perfil de simulador simulador de wokwi, sugiero retirarlas antes de probar en hardware físico
-#define ST7735_RED     0x07E0
-#define ST7735_GREEN   0x001F
-#define ST7735_BLUE    0xF800
-#define ST7735_YELLOW  0x07FF
-#define ST7735_CYAN   0xF81F
+// #define ST7735_RED     0x07E0
+// #define ST7735_GREEN   0x001F
+// #define ST7735_BLUE    0xF800
+// #define ST7735_YELLOW  0x07FF
+// #define ST7735_CYAN   0xF81F
 
 class configSCREEN;
 
@@ -813,12 +813,12 @@ void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pw
   
   // Icono central
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
-  printWSizeAt(65, 50, F("!"), 3);
+  printWSizeAt(100, 45, F("!"), 5);
   
   // Descripción del error
   tft.setTextColor(ST7735_RED, ST7735_BLACK);
-  tft.setTextSize(1);
-  tft.setCursor(5, 30);
+  tft.setTextSize(TFT_SMALL_SIZE);
+  tft.setCursor(5, 25);
   
   switch(errCode) {
     case 1: tft.print(F("AC synchronization failure")); break;
@@ -830,15 +830,14 @@ void DSPL::showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pw
   // Datos de contexto para diagnóstico
   tft.setTextColor(ST7735_CYAN, ST7735_BLACK);
   printValAt(5, 45, F("Temp: "), lastTemp);
-  printValAt(5, 58, F("Fan: "), fan);
-  printValAt(5, 71, F("Htr power: "), pwr);
+  printValAt(5, 65, F("Fan: "), fan);
+  printValAt(5, 85, F("Htr power: "), pwr);
+
+    // Línea separadora inferior
+  tft.drawFastHLine(10, 104, 140, ST7735_GREEN);
   
   // Instrucción de acción
-  tft.setTextColor(ST7735_YELLOW, ST7735_BLACK);
-  printAt(5, 84, F("Press encoder to return"));
-
-  // Línea separadora inferior
-  tft.drawLine(0, 97, tft.width(), 97, ST7735_GREEN);
+  printWColorSizeAt(11, 114, F("Press encoder to return"), ST7735_YELLOW, TFT_SMALL_SIZE);
 }
 
 //------------------------------------------ class HISTORY ----------------------------------------------------
@@ -1286,8 +1285,8 @@ SCREEN* mainSCREEN::show(void) {
 
 SCREEN* mainSCREEN::menu(void) {
 	if (mode_temp) {                                                        // Prepare to adjust the fan speed
-		uint8_t	fs = pHG->getFanSpeed();
-		pEnc->reset(fs, 0, 255, 5, 20);
+		uint8_t	fan = pHG->getFanSpeed();
+		pEnc->reset(fan, 0, 255, 5, 20);
 		mode_temp = false;
 	} else {                                                                // Prepare to adjust the preset temperature
 		uint16_t temp_set   = pHG->getTemp();
@@ -1342,8 +1341,8 @@ void workSCREEN::init(void) {
     pD->invalidateCache();
     pD->clear();
     pD->drawStatic();
-	uint8_t fs = pHG->getFanSpeed();
-    pEnc->reset(fs, 0, 255, 5, 20);
+	uint8_t fan = pHG->getFanSpeed();
+    pEnc->reset(fan, 0, 255, 5, 20);
     mode_temp   = false;                                                    // By default adjust the fan speed
 	pHG->switchPower(true);
 	ready = false;
@@ -1442,12 +1441,12 @@ void errorSCREEN::init(void) {
   pHG->switchPower(false); // Apaga hardware inmediatamente
   
   // Captura el estado EXACTO en el instante del fallo
-  uint16_t t = pHG->tempAverage();
-  uint8_t  f = pHG->getFanSpeed();
-  uint8_t  p = pHG->appliedPower();
+  uint16_t temp = pHG->tempAverage();
+  uint8_t  fan = pHG->getFanSpeed();
+  uint8_t  power = pHG->appliedPower();
   
  
-  pD->showError(1, t, f, p); // 1; // Pinta el panel diagnóstico
+  pD->showError(1, temp, fan, power); // 1; // Pinta el panel diagnóstico
   pBz->failedBeep();      // Alerta sonora
 }
 
@@ -1885,13 +1884,7 @@ SCREEN* calibSCREEN::menu_long(void) {
     buildCalibration(tip);
     pCfg->saveCalibrationData(tip);
     pCfg->applyCalibrationData(tip);
-    
-    // --- SOLUCIÓN REAL: Obligamos al hardware de la Hot Gun a adoptar ---
-    // la nueva matemática de calibración para que no ocurra el choque de datos.
     pHG->init(); 
-    // --------------------------------------------------------------------
-
-    uint8_t fan = pHG->getFanSpeed();
     
     // Guardamos usando la instrucción nativa idéntica a la del menú EXIT
     pCfg->save(pCfg->tempPreset(), pHG->getFanSpeed());
@@ -1996,15 +1989,15 @@ SCREEN* tuneSCREEN::show(void) {
     if (millis() < update_screen) return this;
     update_screen = millis() + period;
     uint16_t temp   = pHG->getCurrTemp();
-    uint8_t  power  = pHG->appliedPower();
-    uint8_t fan = pHG->getFanSpeed();
+    uint8_t  htrPower  = pHG->appliedPower();
+    uint8_t fanSpeed = pHG->getFanSpeed();
     if (!on) {
-        power = pEnc->read();
+        htrPower = pEnc->read();
     }
     pD->tInternal(temp, 20, 46, TFT_LABEL_SIZE);
-    pD->appliedPower(power, 92, 86, TFT_LABEL_SIZE);
-    pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
-    if (heat_ms && ((millis() - heat_ms) > 3000) && (pHG->tempDispersion() < 10) && (power > 1)) {
+    pD->appliedPower(htrPower, 92, 86, TFT_LABEL_SIZE);
+    pD->fanSpeed(fan, 92, 45, TFT_LABEL_SIZE);
+    if (heat_ms && ((millis() - heat_ms) > 3000) && (pHG->tempDispersion() < 10) && (htrPower > 1)) {
         pBz->shortBeep();
         heat_ms = 0;
     }
@@ -2118,16 +2111,16 @@ SCREEN* pidSCREEN::show(void) {
 	update_screen = millis() + period;
 	if (pHG->isOn()) {
 		int		 temp   = pHG->getCurrTemp();
-		uint8_t	 pwr 	= pHG->powerAverage();
-		uint8_t  fs		= pHG->getFanSpeed();
-		fs = map(fs, 0, 255, 0, 100);
+		uint8_t	 htrPower 	= pHG->powerAverage();
+		uint8_t  fanSpeed		= pHG->getFanSpeed();
+		fanSpeed = map(fanSpeed, 0, 255, 0, 100);
         Serial.print(temp_set - temp);
 
         Serial.print(F(": power = "));
-        Serial.print(pwr);
+        Serial.print(htrPower);
         Serial.print('%');
         Serial.print(F(", fan = "));
-        Serial.print(fs);
+        Serial.print(fanSpeed);
         Serial.println(';');
 	}
 	return this;
