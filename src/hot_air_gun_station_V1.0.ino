@@ -69,7 +69,7 @@ static const char TXT_CALIBRATION[] PROGMEM = "CALIBRATION";
 #define TFT_CHAR_W(s) (6 * (s))
 #define TFT_CHAR_H(s) (8 * (s))
 
-#define SIMULATION_MODE //Se agrega para fines de poder corregir cualquier posible problema con la interfaz de la calibración.
+//#define SIMULATION_MODE //Se agrega para fines de poder corregir cualquier posible problema con la interfaz de la calibración.
 
 //------------------------------------------ Configuration data ------------------------------------------------
 /* Config record in the EEPROM has the following format:
@@ -423,12 +423,11 @@ class DSPL {
         void    tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize);                                          // Show the real temperature in Celsius in calibrate mode
         void    fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize);                                        // Show the fan speed
 		void	appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool show_zero = true);			    // Show applied power (%)
-        void    setupMode(uint8_t mode);
+        void    setupMode(uint8_t mode, bool forceRefresh = false);
         void    msgFail(void);                                              // Show 'Fail' message
         void    msgTune(void);
         void    showError(uint8_t errCode, uint16_t lastTemp, uint8_t fan, uint8_t pwr);                                              // Show 'Tune' message
     private:
-        bool 	full_second_line;                                           // Whether the second line is full with the message
 		char 	temp_units;
         uint16_t last_set;
         uint16_t last_curr;
@@ -505,11 +504,11 @@ void DSPL::drawCalibrationSaved(uint8_t currentPoint) {
     tft.setTextColor(ST7735_WHITE);
 
     for (uint8_t i = 0; i < 3; i++) {
-        tft.setCursor(28, 38 + (i * 22));
+        tft.setCursor(32, 37 + (i * 28));
         if (i <= currentPoint)
-            tft.print(F("[X]" ));
+            tft.print(F("[X] "));
         else
-            tft.print(F("[ ]" ));
+            tft.print(F("[ ] "));
 
         tft.print(temp_tip[i]);
 
@@ -523,9 +522,9 @@ void DSPL::drawCalibrationComplete() {
 
     drawHeader(F("DONE"), ST7735_GREEN);
 
-    printWColorSizeAt(18, 42, TXT_CALIBRATION, ST7735_WHITE, TFT_LABEL_SIZE);
+    printWColorSizeAt(14, 54, TXT_CALIBRATION, ST7735_WHITE, TFT_LABEL_SIZE);
 
-    printAt(36, 62, F("SAVED"));
+    printAt(50, 76, F("SAVED"));
 }
 
 void DSPL::drawCalibrationLayout(bool ready) {
@@ -746,50 +745,44 @@ void DSPL::drawState(const __FlashStringHelper* txtState, uint16_t color) {
     printWColorSizeAt(90, 105, txtState, color, TFT_LABEL_SIZE);
 }
 
-void DSPL::setupMode(byte mode) {
-
-    static bool firstDraw = true;
-    static byte lastMode = 255;
-
+void DSPL::setupMode(byte mode, bool forceRefresh) {
+    // Almacena la posición del selector del menú actual en el que estamos trabajando
+    static byte currentMenuSelector = 255; 
     const uint8_t yPos[] = {25, 45, 65, 85, 105};
 
-    // Dibujar menú una sola vez
-
-    if (firstDraw) {
-
+    // Si la pantalla nos pide un rediseño total (porque entramos de cero)
+    if (forceRefresh) {
         tft.fillScreen(ST7735_BLACK);
         printWColorSizeAt(50, 5, F("SETUP"), ST7735_GREEN, TFT_LABEL_SIZE);
-
         printWColorAt(15, yPos[0], F("Calibrate"), ST7735_WHITE);
-
         printAt(15, yPos[1], F("Heater Test"));
-
         printAt(15, yPos[2], F("Save config"));
-
         printAt(15, yPos[3], F("Exit"));
-
         printAt(15, yPos[4], F("Reset config"));
-
-        firstDraw = false;
-
-        lastMode = 255;
+        
+        // Dibujamos el selector inicial
+        tft.setTextColor(ST7735_YELLOW);
+        tft.setCursor(2, yPos[mode]);
+        tft.write(16);
+        
+        currentMenuSelector = mode;
+        return;
     }
 
-    if (mode == lastMode && !firstDraw) return;
+    // Si no se fuerza el refresco y el modo es el mismo, no hacemos nada
+    if (mode == currentMenuSelector) return;
 
-    // borrar selector anterior SOLO con espacio
-
-    if (lastMode != 255) {
-        tft.fillRect(2, yPos[lastMode], 12, 16, ST7735_BLACK);
+    // Borrar selector anterior SOLO si era una posición válida
+    if (currentMenuSelector != 255) {
+        tft.fillRect(2, yPos[currentMenuSelector], 12, 16, ST7735_BLACK);
     }
 
-    // dibujar nuevo selector
-
+    // Dibujar nuevo selector
     tft.setTextColor(ST7735_YELLOW);
     tft.setCursor(2, yPos[mode]);
     tft.write(16);
 
-    lastMode = mode;
+    currentMenuSelector = mode;
 }
 
 void DSPL::msgFail(void) {
@@ -1504,7 +1497,7 @@ SCREEN* configSCREEN::show(void) {
 
         pD->clear();
 
-        pD->setupMode(mode);
+        pD->setupMode(mode, true);
 
         last_mode = mode;
 
@@ -1515,7 +1508,7 @@ SCREEN* configSCREEN::show(void) {
 
     if (last_mode != mode) {
 
-        pD->setupMode(mode);
+        pD->setupMode(mode, false);
 
         last_mode = mode;
     }
