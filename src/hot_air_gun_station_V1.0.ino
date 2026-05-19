@@ -12,11 +12,11 @@
 #include <SPI.h>
 
 //Correcciones definidas para el perfil de simulador simulador de wokwi, sugiero retirarlas antes de probar en hardware físico
-// #define ST7735_RED     0x07E0
-// #define ST7735_GREEN   0x001F
-// #define ST7735_BLUE    0xF800
-// #define ST7735_YELLOW  0x07FF
-// #define ST7735_CYAN   0xF81F
+#define ST7735_RED     0x07E0
+#define ST7735_GREEN   0x001F
+#define ST7735_BLUE    0xF800
+#define ST7735_YELLOW  0x07FF
+#define ST7735_CYAN   0xF81F
 
 class configSCREEN;
 
@@ -55,7 +55,6 @@ static const char TXT_ON[]         PROGMEM = "ON";
 static const char TXT_HOLD[]       PROGMEM = "HOLD";
 static const char TXT_COLD[]       PROGMEM = "COLD";
 static const char TXT_CALIBRATION[] PROGMEM = "CALIBRATION";
-static const char TXT_OK[] PROGMEM = "OK";
 
 #define FS(x) ((__FlashStringHelper*)(x))
 
@@ -70,7 +69,7 @@ static const char TXT_OK[] PROGMEM = "OK";
 #define TFT_CHAR_W(s) (6 * (s))
 #define TFT_CHAR_H(s) (8 * (s))
 
-//#define SIMULATION_MODE //Se agrega para fines de poder corregir cualquier posible problema con la interfaz de la calibración.
+#define SIMULATION_MODE //Se agrega para fines de poder corregir cualquier posible problema con la interfaz de la calibración.
 
 //------------------------------------------ Configuration data ------------------------------------------------
 /* Config record in the EEPROM has the following format:
@@ -352,7 +351,7 @@ void HOTGUN_CFG::saveCalibrationData(uint16_t tip[3]) {
     cd |= tip[0];
     Config.calibration = cd;
     t_tip[0] = tip[0];
-    t_tip[2] = tip[1];
+    t_tip[1] = tip[1];
     t_tip[2] = tip[2];
 }
 
@@ -400,10 +399,9 @@ class DSPL {
         void    clear(void)                                                 { tft.fillScreen(ST7735_BLACK); }
         void    drawStatic(void);
         void    drawCalibrationIntro(void);
-        void    drawCalibrationChecklist(uint8_t mode);
         void    drawCalibrationLayout(bool ready);
         void    drawCalibrationLayoutBase();
-        void    drawCalibrationSaved(uint16_t point);
+        void    drawCalibrationSaved(uint8_t currentPoint);
         void    drawCalibrationModeLabel(bool ready);
         void    drawCalibrationComplete();
         void    drawHeader(const __FlashStringHelper* title, uint16_t titleBgColor);
@@ -497,22 +495,26 @@ void DSPL::drawCalibrationLayoutBase() {
     printAt(COL_RIGHT, 76, TXT_POWER);
 }
 
-void DSPL::drawCalibrationSaved(uint16_t point) {
+void DSPL::drawCalibrationSaved(uint8_t currentPoint) {
 
     tft.fillScreen(ST7735_BLACK);
 
     drawHeader(F("POINT SAVED"), ST7735_GREEN);
 
+    tft.setTextSize(TFT_LABEL_SIZE);
     tft.setTextColor(ST7735_WHITE);
 
-    tft.setTextSize(TFT_LABEL_SIZE);
+    for (uint8_t i = 0; i < 3; i++) {
+        tft.setCursor(28, 38 + (i * 22));
+        if (i <= currentPoint)
+            tft.print(F("[X]" ));
+        else
+            tft.print(F("[ ]" ));
 
-    tft.setCursor(40, 42);
-    tft.print(point);
+        tft.print(temp_tip[i]);
 
-    tft.print(F("C"));
-
-    printWColorSizeAt(62, 72, TXT_OK, ST7735_GREEN, TFT_VALUE_SIZE);
+        tft.print(temp_units);
+    }
 }
 
 void DSPL::drawCalibrationComplete() {
@@ -524,8 +526,6 @@ void DSPL::drawCalibrationComplete() {
     printWColorSizeAt(18, 42, TXT_CALIBRATION, ST7735_WHITE, TFT_LABEL_SIZE);
 
     printAt(36, 62, F("SAVED"));
-
-    printWColorSizeAt(58, 92, TXT_OK, ST7735_GREEN, TFT_VALUE_SIZE);
 }
 
 void DSPL::drawCalibrationLayout(bool ready) {
@@ -688,8 +688,6 @@ void DSPL::tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {
     tft.fillRect(x,y,textSize * 24,textSize * 8,ST7735_BLACK);
     printWColorSizeAt(20, 83, F(">"), ST77XX_WHITE, textSize);
 
-    tft.print(F(">"));
-
     print3d_on_tft(tft, t);
 
     tft.print(F("C"));
@@ -766,9 +764,9 @@ void DSPL::setupMode(byte mode) {
 
         printAt(15, yPos[1], F("Heater Test"));
 
-        printAt(15, yPos[2], F("Save"));
+        printAt(15, yPos[2], F("Save config"));
 
-        printAt(15, yPos[3], F("Cancel"));
+        printAt(15, yPos[3], F("Exit"));
 
         printAt(15, yPos[4], F("Reset config"));
 
@@ -1229,12 +1227,14 @@ class mainSCREEN : public SCREEN {
 };
 
 void mainSCREEN::init(void) {
+    pD->invalidateCache();
     pD->clear();
     pD->drawStatic();
 	pHG->switchPower(false);
-	uint16_t temp_set 	= pHG->getTemp();
+	uint16_t temp_set 	= pCfg->tempPreset(); 
 	uint16_t tempH 	    = pCfg->tempHuman(temp_set);         				// The preset temperature in the human readable units
     pEnc->reset(tempH, temp_minC, temp_maxC, 1, 5);
+    pEnc->write(tempH);
 	used = !pCfg->isCold(pHG->tempAverage());
 	cool_notified = !used;
 	if (used) {                                   							// the hot gun was used, we should save new data in EEPROM
@@ -1266,8 +1266,9 @@ SCREEN* mainSCREEN::show(void) {
 		used = false;
 	}
 
-    uint16_t temp_set = pHG->getTemp();
-    pD->tSet(pCfg->tempHuman(temp_set), 20, 25, TFT_VALUE_SIZE);
+    // --- CORRECCIÓN: Tomamos el valor actual del encoder para pintar el "SET" ---
+    uint16_t tempH_set = pEnc->read();
+    pD->tSet(tempH_set, 20, 25, TFT_VALUE_SIZE);
 	uint16_t temp  = pHG->tempAverage();
 	uint16_t tempH = pCfg->tempHuman(temp);
 	if (pCfg->isCold(temp)) {
@@ -1345,6 +1346,7 @@ class workSCREEN : public SCREEN {
 };
 
 void workSCREEN::init(void) {
+    pD->invalidateCache();
     pD->clear();
     pD->drawStatic();
 	uint8_t fs = pHG->getFanSpeed();
@@ -1577,6 +1579,7 @@ class calibSCREEN : public SCREEN {
         virtual void    rotaryValue(int16_t value);
         virtual SCREEN* menu(void);
         virtual SCREEN* menu_long(void);
+        virtual SCREEN* invalidateStateCache(void);
     private:
         uint16_t        selectTemp(byte index);                             // Calculate the value of the temperature limit depending on mode
         void            buildCalibration(uint16_t tip[3]);
@@ -1589,6 +1592,7 @@ class calibSCREEN : public SCREEN {
         uint8_t last_mode;
         uint16_t        calib_temp[2][3];                                   // Calibration temperature data measured at each of calibration points (Celsius, internal temp)
         uint16_t        preset_temp;                                        // The preset temp in human readable units
+        uint16_t temp_backup_calib;
         bool            ready;                                              // Whether the temperature has been established
         bool            tune;                                               // Whether the parameter is modifiying
         bool last_tune;
@@ -1599,6 +1603,7 @@ class calibSCREEN : public SCREEN {
 };
 
 void calibSCREEN::init(void) {
+    temp_backup_calib = pCfg->tempPreset();
 
     started=false;
 
@@ -1629,7 +1634,6 @@ void calibSCREEN::init(void) {
     uint16_t temp = temp_tip[mode];
 
     preset_temp = pHG->getTemp();
-
     preset_temp = pCfg->tempHuman(preset_temp);
 
     uint16_t temp_set = pCfg->tempInternal(temp);
@@ -1800,6 +1804,10 @@ SCREEN* calibSCREEN::menu(void) {
 
         pHG->switchPower(true);
 
+        // FORCE FULL REDRAW
+        pD->drawCalibrationLayout(false);
+        pD->invalidateCache();
+
         update_screen = 0;
 
         forceRedraw();
@@ -1821,9 +1829,7 @@ SCREEN* calibSCREEN::menu(void) {
         pHG->switchPower(false);
 
         // ===== SAVED SCREEN =====
-        pD->drawCalibrationSaved(
-            temp_tip[mode]
-        );
+        pD->drawCalibrationSaved(mode);
 
         delay(1200);
 
@@ -1838,13 +1844,19 @@ SCREEN* calibSCREEN::menu(void) {
 
         // Finished all points
         if (mode > 2) {
+
             pD->drawCalibrationComplete();
+
             delay(1500);
+
             return menu_long();
         }
 
+        // =========================
         // Start next heating cycle
+        // =========================
         ready = false;
+
         tune  = true;
 
         uint16_t temp = temp_tip[mode];
@@ -1857,7 +1869,13 @@ SCREEN* calibSCREEN::menu(void) {
 
         pHG->switchPower(true);
 
-        update_screen = 0;
+        // FORCE FULL REDRAW
+        pD->drawCalibrationLayout(false);
+        pD->invalidateCache();
+
+        invalidateStateCache();
+
+        update_screen = millis();
 
         forceRedraw();
 
@@ -1873,12 +1891,32 @@ SCREEN* calibSCREEN::menu_long(void) {
     uint16_t tip[3];
     buildCalibration(tip);
     pCfg->saveCalibrationData(tip);
+    pCfg->applyCalibrationData(tip);
+    
+    // --- SOLUCIÓN REAL: Obligamos al hardware de la Hot Gun a adoptar ---
+    // la nueva matemática de calibración para que no ocurra el choque de datos.
+    pHG->init(); 
+    // --------------------------------------------------------------------
+
     uint8_t fan = pHG->getFanSpeed();
-    pCfg->save(preset_temp, fan);
-    uint16_t temp = pCfg->tempInternal(preset_temp);
-    pHG->setTemp(temp);
+    
+    // Guardamos usando la instrucción nativa idéntica a la del menú EXIT
+    pCfg->save(pCfg->tempPreset(), pHG->getFanSpeed());
+    
+    // Sincronizamos de forma forzada la perilla física del encoder con tus grados reales (208)
+    pEnc->write(preset_temp);
+
     if (next) return next;
     return this;
+}
+
+SCREEN* calibSCREEN::invalidateStateCache(void) {
+
+    last_tune  = !tune;
+
+    last_ready = !ready;
+
+    last_mode  = 255;
 }
 
 /*
@@ -1940,6 +1978,7 @@ class tuneSCREEN : public SCREEN {
 };
 
 void tuneSCREEN::init(void) {
+    pD->invalidateCache();
     pHG->switchPower(false);
     max_power = pHG->getMaxFixedPower();
     pEnc->reset(max_power >> 2, 0, max_power, 1, 2);                        // Rotate the encoder to change the power supplied
@@ -2274,12 +2313,19 @@ void loop() {
     if (!boot_guard || (millis() > 1000 && millis() - last_screen_change > 500)) {
       processing_transition = true;
       
-      // Asegurarse de que no haya conflictos con pantallas anteriores
-      if (nxt != &errScr && nxt != &tuneScr && nxt != &clbScr) {
-        // Solo limpiar si es necesario
-        if (pCurrentScreen != &cfgScr) {
+        // Asegurarse de que no haya conflictos con pantallas anteriores
+        if (nxt != &errScr && nxt != &tuneScr && nxt != &clbScr) {
+        
+        // --- CAMBIO AQUÍ: Forzar limpieza total al regresar a las pantallas principales ---
+        if (nxt == &offScr || nxt == &wrkScr) {
+          disp.clear();
+        } 
+        // Si no va a las principales, mantiene tu filtro de protección original para submenús
+        else if (pCurrentScreen != &cfgScr) {
           disp.clear();
         }
+        // ---------------------------------------------------------------------------------
+        
       }
       
       nxt->init();
