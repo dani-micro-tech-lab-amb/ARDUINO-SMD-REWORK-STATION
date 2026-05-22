@@ -1,0 +1,21 @@
+{
+  "name": "max6675",
+  "author": "Luis Yañez",
+  "pins": [
+    "GND",
+    "VCC",
+    "SCK",
+    "CS",
+    "SO"
+  ],
+  "controls": [
+    {
+      "id": "thTemp",
+      "label": "°C",
+      "type": "range",
+      "min": 0,
+      "max": 1023.75,
+      "step": 0.25
+    }
+  ]
+}

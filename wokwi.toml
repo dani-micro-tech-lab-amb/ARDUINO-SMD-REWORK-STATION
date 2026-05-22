@@ -2,3 +2,7 @@
 version = 1
 firmware = '.pio/build/uno/firmware.hex'
 elf = '.pio/build/uno/firmware.elf'
+
+[[chip]]
+name = "max6675"
+binary = "chips/max6675.chip.wasm"
