@@ -242,7 +242,7 @@ class HOTGUN_CFG : public CONFIG {
 		uint8_t	 fanPreset(void);                                           // The preset fan speed 0 - 255 
         uint16_t tempInternal(uint16_t temp);                               // Translate the human readable temperature into internal value
         uint16_t tempHuman(uint16_t temp);                                  // Translate temperature from internal units to the Celsius
-        void     save(uint16_t temp, uint8_t fanSpeed);                     // Save preset temperature in the internal units and fan speed
+        void     save(uint16_t temp, uint8_t fan_speed);                     // Save preset temperature in the internal units and fan speed
         void     applyCalibrationData(uint16_t tip[3]);
         void     getCalibrationData(uint16_t tip[3]);
         void     saveCalibrationData(uint16_t tip[3]);
@@ -321,9 +321,9 @@ uint16_t HOTGUN_CFG::tempHuman(uint16_t temp) {
     return tempH;
 }
 
-void HOTGUN_CFG::save(uint16_t temp, uint8_t fanSpeed) {
+void HOTGUN_CFG::save(uint16_t temp, uint8_t fan_speed) {
     Config.temp        = constrain(temp, min_temp, max_temp);
-    Config.fan         = fanSpeed;
+    Config.fan         = fan_speed;
     CONFIG::save();                                                         // Save new data into the EEPROM
 }
 
@@ -421,7 +421,7 @@ class DSPL {
         void    tCurr(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize);    // Show the current temperature
         void    tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize);                                      // Show the current temperature in internal units
         void    tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize);                                          // Show the real temperature in Celsius in calibrate mode
-        void    fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize);                                        // Show the fan speed
+        void    fan_speed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize);                                        // Show the fan speed
 		void	appliedPower(uint8_t p, uint8_t x, uint8_t y, uint8_t textSize, bool show_zero = true);			    // Show applied power (%)
         void    setupMode(uint8_t mode, bool forceRefresh = false);
         void    msgFail(void);                                              // Show 'Fail' message
@@ -675,7 +675,7 @@ void DSPL::tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {
     tft.print(F("C"));
 }
 
-void DSPL::fanSpeed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize) {
+void DSPL::fan_speed(uint8_t s, uint8_t x, uint8_t y, uint8_t textSize) {
     uint8_t fanValue = map(s, 0, 255, 0, 99);
     if (fanValue == last_fan) return;
     last_fan = fanValue;
@@ -1225,7 +1225,7 @@ void mainSCREEN::rotaryValue(int16_t value) {
 		pD->tSet(value, 20, 25, TFT_VALUE_SIZE);
 	} else {																// set fan speed
 		pHG->setFanSpeed(value);
-		pD->fanSpeed(value, 92, 35, TFT_LABEL_SIZE);
+		pD->fan_speed(value, 92, 35, TFT_LABEL_SIZE);
 	}
 	update_screen  = millis() + period;
 }
@@ -1260,7 +1260,7 @@ SCREEN* mainSCREEN::show(void) {
 	}
 	pD->tCurr(tempH, 20, 76, TFT_VALUE_SIZE);
     pD->appliedPower(0, 92, 86, TFT_LABEL_SIZE, false);
-    pD->fanSpeed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
+    pD->fan_speed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
 	return this;
 }
 
@@ -1338,7 +1338,7 @@ void workSCREEN::rotaryValue(int16_t value) {   							// Setup new preset tempe
 		pD->tSet(value, 20, 25, TFT_VALUE_SIZE);
 	} else {
 		pHG->setFanSpeed(value);
-		pD->fanSpeed(value, 92, 35, TFT_LABEL_SIZE);
+		pD->fan_speed(value, 92, 35, TFT_LABEL_SIZE);
 	}
 	update_screen = millis() + period;
 }
@@ -1356,7 +1356,7 @@ SCREEN* workSCREEN::show(void) {
     pD->drawState(FS(TXT_ON), ST7735_GREEN);
 	uint8_t p 	= pHG->appliedPower();
 	pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
-    pD->fanSpeed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
+    pD->fan_speed(pHG->getFanSpeed(), 92, 35, TFT_LABEL_SIZE);
 
     
 Serial.print(F("Diff = ")); Serial.print(temp_set - temp);
@@ -1552,10 +1552,10 @@ class calibSCREEN : public SCREEN {
         virtual void    rotaryValue(int16_t value);
         virtual SCREEN* menu(void);
         virtual SCREEN* menu_long(void);
-        virtual SCREEN* invalidateStateCache(void);
     private:
         uint16_t        selectTemp(byte index);                             // Calculate the value of the temperature limit depending on mode
         void            buildCalibration(uint16_t tip[3]);
+        void            invalidateStateCache(void);
         HOTGUN*         pHG;                                                // Pointer to the HOTGUN instance
         DSPL*           pD;                                                 // Pointer to the DSPLay instance
         ENCODER*        pEnc;                                               // Pointer to the rotary encoder instance
@@ -1677,7 +1677,7 @@ SCREEN* calibSCREEN::show(void) {
         if (!pHG->isOn())
             p = 0;
         pD->appliedPower(p, 92, 86, TFT_LABEL_SIZE);
-        pD->fanSpeed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
+        pD->fan_speed(pHG->getFanSpeed(), 92, 45, TFT_LABEL_SIZE);
 
         #ifdef SIMULATION_MODE
 
@@ -1719,7 +1719,7 @@ SCREEN* calibSCREEN::show(void) {
             TFT_LABEL_SIZE
         );
 
-        pD->fanSpeed(
+        pD->fan_speed(
             pHG->getFanSpeed(),
             92,
             45,
@@ -1877,7 +1877,7 @@ SCREEN* calibSCREEN::menu_long(void) {
     return this;
 }
 
-SCREEN* calibSCREEN::invalidateStateCache(void) {
+void calibSCREEN::invalidateStateCache(void) {
 
     last_tune  = !tune;
 
@@ -1954,7 +1954,7 @@ void tuneSCREEN::init(void) {
     pD->clear();
     pD->msgTune();
     pD->drawState(FS(TXT_OFF), ST7735_RED);
-    pD->fanSpeed(255, 92, 45, TFT_LABEL_SIZE);
+    pD->fan_speed(255, 92, 45, TFT_LABEL_SIZE);
     forceRedraw();
 }
 
@@ -1970,15 +1970,15 @@ SCREEN* tuneSCREEN::show(void) {
     if (millis() < update_screen) return this;
     update_screen = millis() + period;
     uint16_t temp   = pHG->getCurrTemp();
-    uint8_t  htrPower  = pHG->appliedPower();
-    uint8_t fanSpeed = pHG->getFanSpeed();
+    uint8_t  htr_power  = pHG->appliedPower();
+    uint8_t fan_speed = pHG->getFanSpeed();
     if (!on) {
-        htrPower = pEnc->read();
+        htr_power = pEnc->read();
     }
     pD->tInternal(temp, 20, 46, TFT_LABEL_SIZE);
-    pD->appliedPower(htrPower, 92, 86, TFT_LABEL_SIZE);
-    pD->fanSpeed(fan, 92, 45, TFT_LABEL_SIZE);
-    if (heat_ms && ((millis() - heat_ms) > 3000) && (pHG->tempDispersion() < 10) && (htrPower > 1)) {
+    pD->appliedPower(htr_power, 92, 86, TFT_LABEL_SIZE);
+    pD->fan_speed(fan_speed, 92, 45, TFT_LABEL_SIZE);
+    if (heat_ms && ((millis() - heat_ms) > 3000) && (pHG->tempDispersion() < 10) && (htr_power > 1)) {
         pBz->shortBeep();
         heat_ms = 0;
     }
@@ -2092,16 +2092,16 @@ SCREEN* pidSCREEN::show(void) {
 	update_screen = millis() + period;
 	if (pHG->isOn()) {
 		int		 temp   = pHG->getCurrTemp();
-		uint8_t	 htrPower 	= pHG->powerAverage();
-		uint8_t  fanSpeed		= pHG->getFanSpeed();
-		fanSpeed = map(fanSpeed, 0, 255, 0, 100);
+		uint8_t	 htr_power 	= pHG->powerAverage();
+		uint8_t  fan_speed		= pHG->getFanSpeed();
+		fan_speed = map(fan_speed, 0, 255, 0, 100);
         Serial.print(temp_set - temp);
 
         Serial.print(F(": power = "));
-        Serial.print(htrPower);
+        Serial.print(htr_power);
         Serial.print('%');
         Serial.print(F(", fan = "));
-        Serial.print(fanSpeed);
+        Serial.print(fan_speed);
         Serial.println(';');
 	}
 	return this;
