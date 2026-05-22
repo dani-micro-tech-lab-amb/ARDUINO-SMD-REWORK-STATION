@@ -562,34 +562,23 @@ void DSPL::drawStatic(void) {
     printAt(COL_RIGHT, 74, TXT_POWER);
 }
 
-static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value) {
-    char buf[4] = {' ', ' ', ' ', 0};
-    if (value > 999) value = 999;
-    if (value >= 100) {
-        buf[0] = '0' + (value / 100);
-        buf[1] = '0' + ((value / 10) % 10);
-        buf[2] = '0' + (value % 10);
-    } else if (value >= 10) {
-        buf[1] = '0' + (value / 10);
-        buf[2] = '0' + (value % 10);
-    } else {
-        buf[2] = '0' + value;
-    }
-    tft.print(buf);
-}
+static void print3d_on_tft(Adafruit_ST7735 &tft, uint16_t value, uint8_t x, uint8_t y, uint16_t textSize)
+{
+    tft.setTextSize(textSize);
+    if (value > 999)
+        value = 999;
 
-static void print2d_on_tft(Adafruit_ST7735 &tft, uint8_t value) {
-    char buf[3] = {' ', ' ', 0};
-    if (value >= 100) {
-        buf[0] = '9';
-        buf[1] = '9';
-    } else if (value >= 10) {
-        buf[0] = '0' + (value / 10);
-        buf[1] = '0' + (value % 10);
-    } else {
-        buf[1] = '0' + value;
-    }
-    tft.print(buf);
+    uint16_t offset = 0;
+
+    if (value < 10)
+        offset = textSize * 12;
+
+    else if (value < 100)
+        offset = textSize * 6;
+
+    tft.setCursor(x + offset, y);
+
+    tft.print(value);
 }
 
 void DSPL::printAt(int16_t x, int16_t y, const char* txt) { 
@@ -655,28 +644,22 @@ void DSPL::tCurr(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize) {
 void DSPL::drawTemp(uint16_t t, uint8_t x, uint8_t y, uint8_t textSize){
     // Redraw only the current temperature area
     tft.fillRect(x, y, textSize*24, textSize*8, ST7735_BLACK);
-    tft.setTextSize(textSize);
     tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(x, y);
-    print3d_on_tft(tft, t);
+    print3d_on_tft(tft, t, x, y, textSize);
     tft.print(temp_units);
 }
 
 void DSPL::tInternal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {  
     tft.fillRect(x, y, textSize*24, textSize * 8, ST7735_BLACK);
-    tft.setCursor(x, y);
-    tft.setTextSize(textSize);
-
     tft.setTextColor(ST7735_WHITE);
 
     if (t < 1023) {
-
-        print3d_on_tft(tft, t);
-
+        print3d_on_tft(tft, t, x, y, textSize);
         tft.print(F("C"));
 
     } else {
-
+        tft.setCursor(x, y);
+        tft.setTextSize(textSize);
         tft.print(F("xxxx"));
     }
 }
@@ -687,7 +670,7 @@ void DSPL::tReal(uint16_t t, uint8_t x, uint8_t y,uint8_t textSize) {
     tft.fillRect(x,y,textSize * 24,textSize * 8,ST7735_BLACK);
     printWColorSizeAt(20, 83, F(">"), ST77XX_WHITE, textSize);
 
-    print3d_on_tft(tft, t);
+    print3d_on_tft(tft, t, x, y, textSize);
 
     tft.print(F("C"));
 }
@@ -733,10 +716,8 @@ void DSPL::drawCalibrationModeLabel(bool ready) {
 void DSPL::drawPercent(uint16_t percentage, uint8_t x, uint8_t y, uint8_t textSize){
     // Redraw only the percentage temperature area
     tft.fillRect(x, y, textSize*24, textSize*8, ST7735_BLACK);
-    tft.setTextSize(textSize);
     tft.setTextColor(ST77XX_WHITE);
-    tft.setCursor(x, y);
-    print3d_on_tft(tft, percentage);
+    print3d_on_tft(tft, percentage, x, y, textSize);
     tft.print(F("%"));
 }
 
