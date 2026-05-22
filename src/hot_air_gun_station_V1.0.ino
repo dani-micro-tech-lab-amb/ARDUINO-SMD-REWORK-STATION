@@ -197,7 +197,7 @@ class HOTGUN_CFG : public CONFIG {
 		uint8_t	 fanPreset(void);                                           // The preset fan speed 0 - 255 
         uint16_t tempInternal(uint16_t temp);                               // Translate the human readable temperature into internal value
         uint16_t tempHuman(uint16_t temp);                                  // Translate temperature from internal units to the Celsius
-        void     save(uint16_t temp, uint8_t fanSpeed);                     // Save preset temperature in the internal units and fan speed
+        void     save(uint16_t temp, uint8_t fan_speed);                     // Save preset temperature in the internal units and fan speed
         void     applyCalibrationData(uint16_t tip[3]);
         void     getCalibrationData(uint16_t tip[3]);
         void     saveCalibrationData(uint16_t tip[3]);
@@ -276,9 +276,9 @@ uint16_t HOTGUN_CFG::tempHuman(uint16_t temp) {
     return tempH;
 }
 
-void HOTGUN_CFG::save(uint16_t temp, uint8_t fanSpeed) {
+void HOTGUN_CFG::save(uint16_t temp, uint8_t fan_speed) {
     Config.temp        = constrain(temp, min_temp, max_temp);
-    Config.fan         = fanSpeed;
+    Config.fan         = fan_speed;
     CONFIG::save();                                                         // Save new data into the EEPROM
 }
 
@@ -362,7 +362,7 @@ class DSPL : protected LiquidCrystal {
     void tCurr(uint16_t t);
     void tInternal(uint16_t t);
     void tReal(uint16_t t);
-    void fanSpeed(uint8_t s);
+    void fan_speed(uint8_t s);
     void appliedPower(uint8_t p, bool show_zero = true);
     void setupMode(uint8_t mode);
     void msgON(void);
@@ -461,7 +461,7 @@ void DSPL::tReal(uint16_t t) {
     LiquidCrystal::print(buff);
 }
 
-void DSPL::fanSpeed(uint8_t s) {
+void DSPL::fan_speed(uint8_t s) {
     char buff[6];
     s = map(s, 0, 255, 0, 99);
     sprintf(buff, " %c%2d%c", (char)2, s, '%');
@@ -899,15 +899,15 @@ void setup() {
 
 void loop() {
     uint16_t tempHuman = readTempPot();
-    uint8_t  fanSpeed  = readFanPot();
+    uint8_t  fan_speed  = readFanPot();
     uint16_t currentTemp = hgCfg.tempHuman(hg.tempAverage());
 
     hg.setTemp(hgCfg.tempInternal(tempHuman));
-    hg.setFanSpeed(fanSpeed);
+    hg.setFanSpeed(fan_speed);
 
     disp.tSet(tempHuman);
     disp.tCurr(currentTemp);
-    disp.fanSpeed(fanSpeed);
+    disp.fan_speed(fan_speed);
     disp.appliedPower(hg.appliedPower());
 
     if (hg.isOn()) {
