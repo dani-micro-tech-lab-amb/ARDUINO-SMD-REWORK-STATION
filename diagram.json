@@ -22,7 +22,6 @@
     { "type": "wokwi-ky-040", "id": "encoder1", "top": 20.9, "left": 671.2, "attrs": {} }
   ],
   "connections": [
-    [ "tft1:LED", "uno:5V", "red", [ "h-19.2", "v95.99", "h-167" ] ],
     [ "uno:8", "bz1:2", "green", [ "v-67.2", "h-277.6" ] ],
     [ "uno:GND.1", "bz1:1", "black", [ "v-19.2", "h-57.3" ] ],
     [ "uno:GND.1", "encoder1:GND", "black", [ "v-86.4", "h749.1", "v143.2" ] ],
