@@ -23,7 +23,6 @@
     { "type": "chip-max6675", "id": "max1", "top": 289.02, "left": 187.2, "attrs": {} }
   ],
   "connections": [
-    [ "tft1:LED", "uno:5V", "red", [ "h-19.2", "v95.99", "h-167" ] ],
     [ "uno:5V", "tft1:VCC", "red", [ "v28.7", "h215" ] ],
     [ "uno:GND.2", "tft1:GND", "black", [ "v38.3", "h215.1" ] ],
     [ "uno:8", "bz1:2", "green", [ "v-67.2", "h-277.6" ] ],
