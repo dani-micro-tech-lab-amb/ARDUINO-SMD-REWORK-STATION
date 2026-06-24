@@ -29,7 +29,6 @@ const uint16_t temp_tip[3] = {200, 300, 400};                               // T
 const uint8_t AC_SYNC_PIN   = 2;                                            // Outlet 220 v synchronization pin. Do not change!
 const uint8_t HOT_GUN_PIN   = 7;                                            // Hot gun heater management pin
 const uint8_t FAN_GUN_PIN   = 9;                                            // Hot gun fan management pin. Do not change! 
-const uint8_t TEMP_GUN_PIN	= A0;                                           // Hot gun temperature checking pin
 
 const uint8_t R_MAIN_PIN	= 3;                                            // Rotary encoder main pin. Do not change!
 const uint8_t R_SECD_PIN	= 4;                                            // Rotary encoder secondary pin
