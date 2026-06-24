@@ -27,23 +27,28 @@ const uint16_t temp_ambC    = 25;
 const uint16_t temp_tip[3] = {200, 300, 400};                               // Temperature reference points for calibration
 
 const uint8_t AC_SYNC_PIN   = 2;                                            // Outlet 220 v synchronization pin. Do not change!
-const uint8_t HOT_GUN_PIN   = 7;                                            // Hot gun heater management pin
-const uint8_t FAN_GUN_PIN   = 9;                                            // Hot gun fan management pin. Do not change! 
-const uint8_t TEMP_GUN_PIN	= A0;                                           // Hot gun temperature checking pin
 
-const uint8_t R_MAIN_PIN	= 3;                                            // Rotary encoder main pin. Do not change!
-const uint8_t R_SECD_PIN	= 4;                                            // Rotary encoder secondary pin
-const uint8_t R_BUTN_PIN	= 5;                                            // Rotary encoder button pin
+// ---------------- HOT AIR ----------------
+const uint8_t HOT_GUN_PIN   = 16;   // Reservado para el SSR/MOC3041
+const uint8_t FAN_GUN_PIN   = 17;   // Reservado para PWM ventilador
+const uint8_t TEMP_GUN_PIN  = 18;
 
-const uint8_t REED_SW_PIN   = 12;                                            // Reed switch pin moved to D12 to free D11 for display
-const uint8_t BUZZER_PIN	= 8;                                            // Buzzer pin
+// ---------------- ENCODER ----------------
+const uint8_t R_MAIN_PIN    = 4;    // CLK
+const uint8_t R_SECD_PIN    = 5;    // DT
+const uint8_t R_BUTN_PIN    = 6;    // SW
+
+// ---------------- AUX ----------------
+const uint8_t BUZZER_PIN    = 7;
+const uint8_t REED_SW_PIN   = 3;    // Temporal, revisar cuando migremos el reed
 
 constexpr uint8_t COL_LEFT  = 20;
 constexpr uint8_t COL_RIGHT = 104;
 
-const int PIN_MAX6675_DO  = A2;
-const int PIN_MAX6675_CS  = A3;
-const int PIN_MAX6675_CLK = A4;
+// ---------------- MAX6675 ----------------
+const int PIN_MAX6675_DO  = 13;
+const int PIN_MAX6675_CS  = 14;
+const int PIN_MAX6675_CLK = 15;
 
 MAX6675 sensorTermocupla(PIN_MAX6675_CLK, PIN_MAX6675_CS, PIN_MAX6675_DO);
 
@@ -65,9 +70,10 @@ static const char TXT_CALIBRATION[] PROGMEM = "CALIBRATION";
 
 #define FS(x) ((__FlashStringHelper*)(x))
 
-#define TFT_CS_PIN  6      // CS on D6 matches Wokwi test code
-#define TFT_DC_PIN  10     // DC on D10 matches Wokwi test code
-#define TFT_RST_PIN A1     // Use free analog pin A1 for TFT reset
+// ---------------- TFT ----------------
+#define TFT_CS_PIN   8
+#define TFT_DC_PIN   9
+#define TFT_RST_PIN 10
 
 #define TFT_LABEL_SIZE (uint8_t)2
 #define TFT_VALUE_SIZE (uint8_t)3
