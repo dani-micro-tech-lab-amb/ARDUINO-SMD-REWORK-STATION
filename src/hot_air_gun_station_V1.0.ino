@@ -2,8 +2,6 @@
  * Hot air gun controller based on atmega328 IC
  * Released November 5, 2018
  */
-#include <avr/io.h>
-#include <avr/interrupt.h>
 #include <Wire.h> 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
@@ -2295,6 +2293,7 @@ void setup() {
   
     // Pequeña pausa para que el primer ciclo del loop no colisione con la inicialización
     delay(50); 
+    //ledcSetup(0, 25000, 8);
 }
 
 void loop() {

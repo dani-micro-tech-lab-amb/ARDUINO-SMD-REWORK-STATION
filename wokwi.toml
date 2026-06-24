@@ -1,7 +1,7 @@
 [wokwi]
 version = 1
-firmware = '.pio/build/uno/firmware.hex'
-elf = '.pio/build/uno/firmware.elf'
+firmware = '.pio/build/esp32s3/firmware.bin'
+elf = '.pio/build/esp32s3/firmware.elf'
 
 [[chip]]
 name = "max6675"
