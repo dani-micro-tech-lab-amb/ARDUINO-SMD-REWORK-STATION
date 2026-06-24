@@ -986,7 +986,7 @@ class FastPWM {
 
         void init(void) {
             ledcAttachPin(FAN_GUN_PIN, 0);
-            ledcSetup(0, 25000, 8);
+            ledcSetup(0, 31250, 8);
             ledcWrite(0, 0);
         }
 
