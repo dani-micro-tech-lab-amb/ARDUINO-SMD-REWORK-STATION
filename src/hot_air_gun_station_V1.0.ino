@@ -2,6 +2,7 @@
  * Hot air gun controller based on atmega328 IC
  * Released November 5, 2018
  */
+#include <esp32-hal-ledc.h>
 #include <Wire.h> 
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
@@ -979,26 +980,20 @@ long PID::reqPower(int temp_set, int temp_curr) {
 }
 
 //--------------------- High frequency PWM signal calss on D9 pin ------------------------- ---------------
-class FastPWM_D9 {
+class FastPWM {
     public:
-        FastPWM_D9()                                { }
-        void init(void);
-        void duty(uint8_t d)                        { OCR1A = d; }
-};
+        FastPWM() {}
 
-void FastPWM_D9::init(void) {
-    pinMode(FAN_GUN_PIN, OUTPUT);
-    digitalWrite(FAN_GUN_PIN, LOW);
-    noInterrupts();
-    TCNT1   = 0;
-    TCCR1B  = _BV(WGM13);                           // set mode as phase and frequency correct pwm, stop the timer
-    TCCR1A  = 0;
-    ICR1    = 256;
-    TCCR1B  = _BV(WGM13) | _BV(CS10);               // Top value = ICR1, prescale = 1
-    TCCR1A |= _BV(COM1A1);                          // XOR D9 on OCR1A, detached from D10
-    OCR1A   = 0;                                    // Switch-off the signal on pin 9;
-    interrupts();
-}
+        void init(void) {
+            ledcAttachPin(FAN_GUN_PIN, 0);
+            ledcSetup(0, 25000, 8);
+            ledcWrite(0, 0);
+        }
+
+        void duty(uint8_t d) {
+            ledcWrite(0, d);
+        }
+};
 
 //--------------------- Hot air gun manager using total sine shape to power on the hardware ---------------
 class HOTGUN : public PID {
@@ -1026,7 +1021,7 @@ class HOTGUN : public PID {
         uint8_t     getMaxFixedPower(void)                                  { return period; }
         bool        syncCB(void);											// Return true at the end of the power period
     private:
-        FastPWM_D9  hg_fan;
+        FastPWM  hg_fan;
 		long     	power;                             						// The hot air gun power, calculated by the PID algorithm
 		uint16_t	temp_set;												// The preset temperature of the hot air gun (internal units)
 		float       temp_curr;												// The current temperature of the hot air gun
@@ -2293,7 +2288,6 @@ void setup() {
   
     // Pequeña pausa para que el primer ciclo del loop no colisione con la inicialización
     delay(50); 
-    //ledcSetup(0, 25000, 8);
 }
 
 void loop() {
