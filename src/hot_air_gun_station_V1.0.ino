@@ -983,8 +983,8 @@ class FastPWM_D9 {
 };
 
 void FastPWM_D9::init(void) {
-    pinMode(9, OUTPUT);
-    digitalWrite(9, LOW);
+    pinMode(FAN_GUN_PIN, OUTPUT);
+    digitalWrite(FAN_GUN_PIN, LOW);
     noInterrupts();
     TCNT1   = 0;
     TCCR1B  = _BV(WGM13);                           // set mode as phase and frequency correct pwm, stop the timer
