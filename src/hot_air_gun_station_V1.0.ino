@@ -31,7 +31,6 @@ const uint8_t AC_SYNC_PIN   = 2;                                            // O
 // ---------------- HOT AIR ----------------
 const uint8_t HOT_GUN_PIN   = 16;   // Reservado para el SSR/MOC3041
 const uint8_t FAN_GUN_PIN   = 17;   // Reservado para PWM ventilador
-const uint8_t TEMP_GUN_PIN  = 18;
 
 // ---------------- ENCODER ----------------
 const uint8_t R_MAIN_PIN    = 4;    // CLK
