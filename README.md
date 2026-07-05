@@ -5,3 +5,15 @@ En el proyecto actual en la simulación los pines que cambiarán serán relativo
 En la rama master encontrará una simulación acorde al diseño original, pantalla LCD 1602 por medio de I2C, el arduino ajustado a un Arduino uno y un encoder genérico, espero le sea de ayuda. En las otras ramas encontrará variaciones, desde quitar el I2C hasta usar 2 sólo 2 potenciómetros (con una funcionalidad e interfaz simplificada) o cambiar la pantalla por una pantalla TFT. 
 
 Cualquier aporte a mi proyecto es bien recibido. Si tiene alguna inquietud, no dude en contactarme, siempre que esté a mi alcance responderla lo haré.
+
+## 🛠️ Diagnóstico y Mantenimiento de Hardware
+
+Este repositorio incluye herramientas de diagnóstico independientes para verificar el hardware antes de cargar el firmware de producción.
+
+### Cómo probar el convertidor de niveles (TXS0108E) y la pantalla:
+1. En **PlatformIO**, cambia el entorno activo a `mantenimiento_hardware_connections_map_TXS0109E`.
+2. Presiona **Upload** para cargar el script de diagnóstico directo al Arduino.
+3. El programa generará pulsos lentos de 5V/3.3V (5 segundos encendido, 3 segundos apagado) en los canales 8 al 4 de forma secuencial.
+4. Utiliza un multímetro u osciloscopio en el taller para medir las salidas del chip y descartar fallas de soldadura o hardware.
+
+Para volver al funcionamiento normal, simplemente cambia el entorno a `estacion_principal` y vuelve a subir el código.
