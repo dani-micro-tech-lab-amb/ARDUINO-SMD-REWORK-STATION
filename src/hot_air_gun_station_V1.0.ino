@@ -451,7 +451,8 @@ class DSPL {
 
 void DSPL::init(void) {
   tft.initR(INITR_BLACKTAB);
-  tft.setRotation(3);
+  tft.setRotation(1); // Ajuste para mi hardware (rotado 180° respecto al simulador)
+  //tft.setRotation(3);//Para el simulador
   tft.fillScreen(ST7735_BLACK);
   tft.setTextWrap(false);
   tft.setTextColor(ST7735_WHITE, ST7735_BLACK);
