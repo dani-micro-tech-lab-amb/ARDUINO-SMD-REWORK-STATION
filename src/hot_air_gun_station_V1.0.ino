@@ -2315,6 +2315,7 @@ void loop() {
   SCREEN* nxt = nullptr;
   // 1. Reed Switch
   SCREEN* rNxt = pCurrentScreen->reedSwitch(reedSwitch.status());
+  Serial.println(reedSwitch.status());
   if (rNxt != pCurrentScreen) nxt = rNxt;
 
   // 2. Botones
@@ -2343,13 +2344,13 @@ void loop() {
     uint32_t current_time = millis();
     if (current_time - last_update >= 1000) last_update = current_time;
     
-    /*Se comenta este bloque para pruebas de los menús en el simulador*/
+    /*Se comenta este bloque para pruebas de los menús en el simulador
     if (current_time > ac_check) {
       ac_check = current_time + 1000;
       if (!hg.areExternalInterrupts()) nxt = &errScr;
       
     }
-    /**/
+    */
   }
 
   // === TRANSICIÓN CORREGIDA ===
