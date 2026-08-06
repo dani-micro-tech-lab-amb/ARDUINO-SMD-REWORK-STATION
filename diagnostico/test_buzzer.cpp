@@ -4,7 +4,7 @@
  * Hardware Diagnostic
  *
  * File      : test_buzzer.cpp
- * Version   : 1.0
+ * Version   : 1.4
  * Author    : Dani Micro Tech Lab
  *
  * Description
@@ -12,7 +12,13 @@
  * Standalone buzzer diagnostic.
  *
  * Encoder button toggles buzzer state.
- * Arduino onboard LED mirrors buzzer output.
+ * 
+ * Hardware-Level Conflict Note:
+ * Arduino Uno shares Pin 13 between Onboard LED and SPI SCK.
+ * To maintain live display updates without electrical conflicts,
+ * the Onboard LED acts as a bilateral transition indicator.
+ * It flashes for 50ms on BOTH activation and deactivation.
+ * Screen freezes imperceptibly only during the flash duration.
  *
  * ==========================================================
  */
@@ -26,9 +32,8 @@
 //
 
 const uint8_t R_BUTN_PIN = 5;
-
 const uint8_t BUZZER_PIN = 8;
-const uint8_t LED_PIN    = LED_BUILTIN;
+const uint8_t LED_PIN    = LED_BUILTIN; 
 
 #define TFT_CS_PIN   6
 #define TFT_DC_PIN   10
@@ -52,7 +57,7 @@ const uint16_t DEBOUNCE_TIME = 40;
 
 bool buzzerState = false;
 
-bool lastButton = HIGH;
+bool lastReading  = HIGH;
 bool stableButton = HIGH;
 
 unsigned long debounceTimer = 0;
@@ -67,6 +72,33 @@ unsigned long lastTransition = 0;
 
 unsigned long accumulatedON = 0;
 unsigned long accumulatedOFF = 0;
+
+//
+// Function Prototypes
+//
+
+void drawHeader();
+void drawStatus();
+void drawCounters();
+void drawButtonState();
+void drawTimers();
+void drawLiveTimer();
+void refreshScreen();
+void registerTransition();
+void toggleBuzzer();
+void setOutputs(bool state);
+void printTime(uint8_t x, uint8_t y, unsigned long milliseconds);
+
+//
+// ----------------------------------------------------------
+// Set Hardware Outputs
+// ----------------------------------------------------------
+//
+
+void setOutputs(bool state)
+{
+    digitalWrite(BUZZER_PIN, state ? HIGH : LOW);
+}
 
 //
 // ----------------------------------------------------------
@@ -236,9 +268,7 @@ void refreshScreen()
 
 //
 // ----------------------------------------------------------
-// Time formatter
-// Format:
-// MM:SS.mmm
+// Time formatter (Format: MM:SS.mmm)
 // ----------------------------------------------------------
 //
 
@@ -278,45 +308,15 @@ void printTime(
 
 void drawTimers()
 {
-    //
     // ON accumulated
-    //
-
-    tft.fillRect(
-        18,
-        96,
-        58,
-        10,
-        ST77XX_BLACK
-    );
-
+    tft.fillRect(18, 96, 58, 10, ST77XX_BLACK);
     tft.setTextColor(ST77XX_GREEN);
+    printTime(18, 96, accumulatedON);
 
-    printTime(
-        18,
-        96,
-        accumulatedON
-    );
-
-    //
     // OFF accumulated
-    //
-
-    tft.fillRect(
-        96,
-        96,
-        58,
-        10,
-        ST77XX_BLACK
-    );
-
+    tft.fillRect(96, 96, 58, 10, ST77XX_BLACK);
     tft.setTextColor(ST77XX_RED);
-
-    printTime(
-        96,
-        96,
-        accumulatedOFF
-    );
+    printTime(96, 96, accumulatedOFF);
 
     tft.setTextColor(ST77XX_WHITE);
 }
@@ -329,27 +329,16 @@ void drawTimers()
 
 void drawLiveTimer()
 {
-    unsigned long elapsed =
-        millis() - lastTransition;
+    unsigned long elapsed = millis() - lastTransition;
 
-    tft.fillRect(
-        36,
-        104,
-        118,
-        10,
-        ST77XX_BLACK
-    );
+    tft.fillRect(36, 104, 118, 10, ST77XX_BLACK);
 
     if(buzzerState)
         tft.setTextColor(ST77XX_GREEN);
     else
         tft.setTextColor(ST77XX_RED);
 
-    printTime(
-        36,
-        104,
-        elapsed
-    );
+    printTime(36, 104, elapsed);
 
     tft.setTextColor(ST77XX_WHITE);
 }
@@ -362,8 +351,7 @@ void drawLiveTimer()
 
 void registerTransition()
 {
-    unsigned long elapsed =
-        millis() - lastTransition;
+    unsigned long elapsed = millis() - lastTransition;
 
     if(buzzerState)
         accumulatedON += elapsed;
@@ -375,22 +363,70 @@ void registerTransition()
 
 //
 // ----------------------------------------------------------
-// Toggle buzzer
+// Toggle buzzer (Bilateral LED Flash Implementation)
 // ----------------------------------------------------------
 //
 
 void toggleBuzzer()
 {
     registerTransition();
-
     buzzerState = !buzzerState;
-
     toggleCounter++;
-
+    
+    // Cambia el estado del buzzer físicamente
     setOutputs(buzzerState);
 
+    // Apaga el hardware SPI temporalmente en cualquier cambio de estado
+    SPI.end(); 
+    
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, HIGH); // El LED integrado destella con brillo total
+    
+    delay(50); // Mantiene congelada la imagen de la pantalla durante 50ms
+    
+    digitalWrite(LED_PIN, LOW); // Apaga el LED antes de devolver el pin
+    
+    // ==============================================================
+    // ¡REMEDIO PARA LOS NÚMEROS INVERTIDOS!
+    // ==============================================================
+    SPI.begin();          // Reactiva el bus SPI de la pantalla
+    tft.setRotation(1);   // Re-aplica la orientación horizontal (1) para restaurar los registros corregidos
+    // ==============================================================
+
+    // Fuerza el refresco completo con los nuevos estados gráficos en el ángulo correcto
     refreshScreen();
 }
+
+
+//
+// ----------------------------------------------------------
+// Setup
+// ----------------------------------------------------------
+//
+
+void setup()
+{
+    // 1. Damos 500ms obligatorios para que el regulador Buck alcance los 5V 
+    // estables y el controlador ST7735 de la pantalla se energice por completo.
+    delay(500); 
+
+    // 2. Ahora sí, configuramos los pines lógicos del sistema
+    pinMode(R_BUTN_PIN, INPUT_PULLUP);
+    pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(LED_PIN, OUTPUT); 
+
+    setOutputs(false);
+
+    // 3. Inicializamos la pantalla cuando ya el voltaje es 100% seguro y limpio
+    tft.initR(INITR_BLACKTAB);
+    tft.setRotation(1);
+
+    lastTransition = millis();
+
+    drawHeader();
+    refreshScreen();
+}
+
 
 //
 // ----------------------------------------------------------
@@ -402,47 +438,38 @@ void loop()
 {
     bool reading = digitalRead(R_BUTN_PIN);
 
-    //
     // Detect button transition
-    //
-
     if(reading != lastReading)
     {
         debounceTimer = millis();
         lastReading = reading;
     }
 
-    //
     // Debounce
-    //
-
     if((millis() - debounceTimer) > DEBOUNCE_TIME)
     {
         if(reading != stableButton)
         {
             stableButton = reading;
 
-            //
             // Toggle only on button press
-            //
-
             if(stableButton == LOW)
             {
                 toggleBuzzer();
             }
+            else
+            {
+                drawButtonState();
+            }
         }
     }
 
-    //
     // Refresh live timer every 100 ms
-    //
-
     static unsigned long refreshTimer = 0;
 
     if((millis() - refreshTimer) >= 100)
     {
         refreshTimer = millis();
-
         drawLiveTimer();
     }
 }
