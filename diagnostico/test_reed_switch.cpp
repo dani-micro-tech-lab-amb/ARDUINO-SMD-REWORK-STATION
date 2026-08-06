@@ -279,42 +279,47 @@ void updateLED()
 }
 
 //
-// Process Reed Switch Input (Lógica Conmutada / Toggle)
+// Process Reed Switch Input (Sustained State Logic)
 //
 void processReed()
 {
     bool reading = digitalRead(REED_PIN);
 
-    // Detectar flanco de bajada (de HIGH a LOW) cuando el imán pasa sobre el sensor
-    if (reading == LOW && lastReading == HIGH)
+    // Detecta flanco o variación física en el pin
+    if (reading != lastReading)
     {
-        // Filtrar rebotes usando el tiempo transcurrido desde la última conmutación
-        if ((millis() - debounceTimer) > DEBOUNCE_TIME)
+        debounceTimer = millis();
+        lastReading   = reading;
+        bounceCounter++;
+    }
+
+    // Espera a que la señal permanezca estable por DEBOUNCE_TIME
+    if ((millis() - debounceTimer) >= DEBOUNCE_TIME)
+    {
+        // Mapeo lógico: INPUT_PULLUP -> LOW es CLOSED (en la base)
+        ReedState stableState = (reading == LOW) ? REED_CLOSED : REED_OPEN;
+
+        // Si el estado estable difiere del estado actual sostenido en memoria
+        if (stableState != currentState)
         {
             registerTransition();
 
-            // Alternar el estado sostenido
-            if (currentState == REED_OPEN)
-            {
-                currentState = REED_CLOSED;
-                activationCounter++;
-                if (result == TEST_WAITING) result = TEST_PASS;
-            }
-            else
-            {
-                currentState = REED_OPEN;
-            }
+            currentState = stableState; // Retiene el estado indefinidamente
 
             updateLED();
             drawState();
+
+            if (currentState == REED_CLOSED)
+            {
+                activationCounter++;
+                if (result == TEST_WAITING)
+                    result = TEST_PASS;
+            }
+
             drawCounters();
             drawResult();
-
-            debounceTimer = millis();
         }
     }
-
-    lastReading = reading;
 }
 
 //
